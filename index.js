@@ -5,7 +5,7 @@ module.exports = {
   onPostBuild: async ({constants, utils, inputs}) => {
     const nim = `npx -p https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz nim`;
     // Login
-    if (process.env.CI) {
+    if (process.env.NETLIFY) {
       await utils.run.command(
         `${nim} auth login ${process.env.NIM_TOKEN || inputs.nimbellaToken}`
       );
