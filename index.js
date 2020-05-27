@@ -3,10 +3,12 @@ const {join} = require('path');
 
 module.exports = {
   onPostBuild: async ({constants, utils, inputs}) => {
-    // // Login
-    // await utils.run.command(
-    //   `npx nim auth login ${process.env.NIM_TOKEN || inputs.nimbellaToken}`
-    // );
+    // Login
+    if (process.env.CI) {
+      await utils.run.command(
+        `npx nim auth login ${process.env.NIM_TOKEN || inputs.nimbellaToken}`
+      );
+    }
 
     // Redirect api calls
     const {stdout} = await utils.run.command('npx nim auth current');
