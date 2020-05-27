@@ -1,1 +1,4 @@
 name: netlify-plugin-nimbella
+inputs:
+  - name: nimbellaToken
+    description: Your Nimbella token.
