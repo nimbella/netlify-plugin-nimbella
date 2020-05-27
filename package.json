@@ -1,6 +1,6 @@
 {
   "name": "netlify-plugin-nimbella",
-  "version": "0.0.0-dev.0",
+  "version": "0.0.0-dev.1",
   "main": "index.js",
   "dependencies": {
     "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz"
