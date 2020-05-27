@@ -11,7 +11,7 @@ module.exports = {
     // Redirect api calls
     const {stdout} = await utils.run.command('npx nim auth current');
     const namespace = stdout.trim();
-    const redirectRule = `/.netlify/functions/* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`;
+    const redirectRule = `/api/* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`;
     await appendFile(join(constants.PUBLISH_DIR, '_redirects'), redirectRule);
 
     const {readdir} = require('fs').promises;
