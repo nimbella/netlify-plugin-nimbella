@@ -1,11 +1,24 @@
 {
   "name": "netlify-plugin-nimbella",
-  "version": "0.1.0",
+  "version": "0.0.0-dev.0",
   "main": "index.js",
   "dependencies": {
     "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz"
   },
-  "devDependencies": {
-    "@netlify/build": "^1.0.2"
-  }
+  "description": "",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nimbella/netlify-plugin-nimbella.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nimbella/netlify-plugin-nimbella/issues"
+  },
+  "homepage": "https://github.com/nimbella/netlify-plugin-nimbella#readme"
 }
