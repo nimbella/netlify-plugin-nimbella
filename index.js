@@ -21,7 +21,7 @@ module.exports = {
     const packages = fs.existsSync('packages');
 
     if (packages) {
-      await utils.run.command(`${nim} deploy . --exclude=web`);
+      await utils.run.command(`${nim} project deploy . --exclude=web`);
     }
 
     // Redirect api calls

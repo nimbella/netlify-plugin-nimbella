@@ -1,6 +1,6 @@
 {
   "name": "netlify-plugin-nimbella",
-  "version": "0.0.0-dev.6",
+  "version": "0.0.0-dev.7",
   "main": "index.js",
   "description": "",
   "devDependencies": {},
@@ -11,7 +11,10 @@
     "type": "git",
     "url": "git+https://github.com/nimbella/netlify-plugin-nimbella.git"
   },
-  "keywords": [],
+  "keywords": [
+    "netlify",
+    "netlify-plugin"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {
