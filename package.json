@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/nimbella/netlify-plugin-nimbella/issues"
   },
-  "homepage": "https://github.com/nimbella/netlify-plugin-nimbella#readme"
+  "homepage": "https://github.com/nimbella/netlify-plugin-nimbella#readme",
+  "dependencies": {
+    "@iarna/toml": "^2.2.5"
+  }
 }
