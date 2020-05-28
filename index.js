@@ -26,7 +26,7 @@ module.exports = {
 
     // Redirect api calls
     const redirectRule = `${
-      config.nimbella.path ? config.nimbella.path : '/.netlify/functions/'
+      config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
     }* https://apigcp.nimbella.io/api/v1/web/${namespace}/${
       packages ? ':splat' : 'default/:splat'
     } 200!\n`;
