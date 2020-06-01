@@ -13,7 +13,11 @@
   },
   "keywords": [
     "netlify",
-    "netlify-plugin"
+    "netlify-plugin",
+    "nimbella",
+    "openwhisk",
+    "serverless",
+    "jamstack"
   ],
   "author": "",
   "license": "ISC",
