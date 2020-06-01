@@ -1,62 +1,74 @@
-const {appendFile, readFile, readdir} = require('fs').promises;
-const fs = require('fs');
+const {appendFile, readFile, readdir, existsSync} = require('fs');
 const {join} = require('path');
 const toml = require('@iarna/toml');
 
 const nim = `npx -p https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz nim`;
 
+const isLoggedIn = existsSync(join(process.env.HOME, '.nimbella'));
+
+/**
+ * Deploy a Nimbella Project.
+ * @param {*} run - function provided under utils by Netlify to build event functions.
+ */
+async function deployProject(run) {
+  await run.command(`${nim} project deploy . --exclude=web`);
+}
+
+/**
+ * Deploy actions under a directory. Currently limited to lambda functions.
+ * @param {string} functionsDir - Path to the actions directory.
+ */
+async function deployActions(functionsDir) {
+  const files = await readdir(functionsDir);
+  for (const file of files) {
+    // Deploy
+    console.log(`Deploying ${file}...`);
+    const {stderr, exitCode} = await utils.run.command(
+      `${nim} action update ${file.split('.')[0]} ${join(
+        functionsDir,
+        file
+      )} --kind nodejs-lambda:10 --main handler --web=true`,
+      {reject: false, stdout: 'ignore'}
+    );
+
+    if (exitCode === 0) {
+      console.log('done.');
+    } else {
+      console.log(stdout || stderr);
+    }
+  }
+}
+
 module.exports = {
-  onPreBuild: async ({constants, utils}) => {
-    // Login
-    if (process.env.NETLIFY) {
+  // Execute before build starts.
+  onPreBuild: async ({utils, inputs}) => {
+    // Login if not logged in before.
+    if (!isLoggedIn || process.env.NETLIFY) {
       await utils.run.command(
         `${nim} auth login ${process.env.NIM_TOKEN || inputs.nimbellaToken}`
       );
     }
   },
-  onPostBuild: async ({constants, utils, inputs}) => {
+  // Execute after build is done.
+  onPostBuild: async ({constants, utils}) => {
     const config = toml.parse(await readFile(constants.CONFIG_PATH));
-    const {stdout} = await utils.run.command(`${nim} auth current`);
-    const namespace = stdout.trim();
-    const packages = fs.existsSync('packages');
+    const {stdout: namespace} = await utils.run.command(`${nim} auth current`);
+    const isProject = existsSync('packages');
+    const isActions = existsSync(config.nimbella.functions);
 
-    if (packages) {
-      await utils.run.command(`${nim} project deploy . --exclude=web`);
+    if (isProject) {
+      await deployProject(utils.run);
     }
 
-    // Redirect api calls
+    if (isActions) {
+      await deployActions(config.nimbella.functions);
+    }
+
+    // Add a Netlify redirect rule to redirect api calls to Nimbella.
     const redirectRule = `${
       config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
-    }* https://apigcp.nimbella.io/api/v1/web/${namespace}/${
-      packages ? ':splat' : 'default/:splat'
-    } 200!\n`;
+    }* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!\n`;
 
     await appendFile(join(constants.PUBLISH_DIR, '_redirects'), redirectRule);
-
-    // Deploy functions if they exist.
-    if (fs.existsSync(config.nimbella.functions)) {
-      const files = await readdir(config.nimbella.functions);
-
-      for (const file of files) {
-        // Deploy
-        console.log(`Deploying ${file}...`);
-        let {
-          stderr,
-          exitCode
-        } = await utils.run.command(
-          `${nim} action update ${file.split('.')[0]} ${join(
-            config.nimbella.functions,
-            file
-          )} --kind nodejs-lambda:10 --main handler --web=true`,
-          {reject: false, stdout: 'ignore'}
-        );
-
-        if (exitCode === 0) {
-          console.log('done.');
-        } else {
-          console.log(stdout || stderr);
-        }
-      }
-    }
   }
 };
