@@ -41,9 +41,9 @@ async function deployActions(functionsDir) {
 
 module.exports = {
   // Execute before build starts.
-  onPreBuild: async ({utils, inputs, build}) => {
+  onPreBuild: async ({utils, inputs}) => {
     if (!process.env.NIM_TOKEN || !inputs.nimbellaToken) {
-      build.failBuild(
+      utils.build.failBuild(
         'Token not present. Please setup an env named `NIM_TOKEN`.'
       );
     }
