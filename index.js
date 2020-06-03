@@ -1,4 +1,5 @@
-const {appendFile, readFile, readdir, existsSync} = require('fs');
+const {existsSync} = require('fs');
+const {appendFile, readFile, readdir} = require('fs').promises;
 const {join} = require('path');
 const toml = require('@iarna/toml');
 
@@ -16,14 +17,15 @@ async function deployProject(run) {
 
 /**
  * Deploy actions under a directory. Currently limited to lambda functions.
+ * @param {function} run - function provided under utils by Netlify to build event functions.
  * @param {string} functionsDir - Path to the actions directory.
  */
-async function deployActions(functionsDir) {
+async function deployActions(run, functionsDir) {
   const files = await readdir(functionsDir);
   for (const file of files) {
     // Deploy
     console.log(`Deploying ${file}...`);
-    const {stderr, exitCode} = await utils.run.command(
+    const {stderr, exitCode} = await run.command(
       `${nim} action update ${file.split('.')[0]} ${join(
         functionsDir,
         file
@@ -67,7 +69,7 @@ module.exports = {
     }
 
     if (isActions) {
-      await deployActions(config.nimbella.functions);
+      await deployActions(utils.run, config.nimbella.functions);
     }
 
     // Add a Netlify redirect rule to redirect api calls to Nimbella.
