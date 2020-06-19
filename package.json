@@ -1,6 +1,6 @@
 {
   "name": "netlify-plugin-nimbella",
-  "version": "0.0.0-dev.12",
+  "version": "0.0.0-dev.13",
   "main": "index.js",
   "description": "",
   "devDependencies": {},
