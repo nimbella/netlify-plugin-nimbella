@@ -44,7 +44,7 @@ async function deployActions(run, functionsDir) {
 module.exports = {
   // Execute before build starts.
   onPreBuild: async ({utils, inputs}) => {
-    if (!process.env.NIM_TOKEN && !inputs.nimbellaToken) {
+    if (!process.env.NIMBELLA_LOGIN_TOKEN && !inputs.nimbellaToken) {
       utils.build.failBuild(
         'Token not present. Please setup an env named `NIM_TOKEN`.'
       );
@@ -53,7 +53,9 @@ module.exports = {
     // Login if not logged in before.
     if (!isLoggedIn || process.env.NETLIFY) {
       await utils.run.command(
-        `${nim} auth login ${process.env.NIM_TOKEN || inputs.nimbellaToken}`
+        `${nim} auth login ${
+          process.env.NIMBELLA_LOGIN_TOKEN || inputs.nimbellaToken
+        }`
       );
     }
   },

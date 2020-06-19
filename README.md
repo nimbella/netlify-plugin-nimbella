@@ -13,7 +13,7 @@ Just add this to your netlify.toml:
 package = "netlify-plugin-nimbella"
 ```
 
-Create an environmental variable named `NIM_TOKEN` with your [Nimbella](https://nimbella.com/signup) auth token using any of the channels mentioned in this [guide](https://docs.netlify.com/configure-builds/environment-variables/#declare-variables).
+Create an environmental variable named `NIMBELLA_LOGIN_TOKEN` with your [Nimbella](https://nimbella.com/signup) auth token using any of the channels mentioned in this [guide](https://docs.netlify.com/configure-builds/environment-variables/#declare-variables).
 
 ## Usage
 
