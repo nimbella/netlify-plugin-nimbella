@@ -46,7 +46,7 @@ module.exports = {
   onPreBuild: async ({utils, inputs}) => {
     if (!process.env.NIMBELLA_LOGIN_TOKEN && !inputs.nimbellaToken) {
       utils.build.failBuild(
-        'Token not present. Please setup an env named `NIM_TOKEN`.'
+        'Nimbella login token not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
       );
     }
 
