@@ -1,29 +1,50 @@
 # netlify-plugin-nimbella
 
-> **Note:** This plugin is pretty much work in progress.
+[![Version](https://img.shields.io/npm/v/netlify-plugin-nimbella.svg)](https://npmjs.org/package/netlify-plugin-nimbella)
+[![Downloads/week](https://img.shields.io/npm/dw/netlify-plugin-nimbella.svg)](https://npmjs.org/package/netlify-plugin-nimbella)
+[![License](https://img.shields.io/npm/l/netlify-plugin-nimbella.svg)](https://github.com/nimbella/netlify-plugin-nimbella/blob/master/package.json)
 
-A Netlify Build Plugin that extends Netlify Functions to support different runtimes.
+A Netlify Build Plugin that extends Netlify Functions to support different runtimes using [Nimbella Cloud](https://nimbella.com/product/platform).
 
-## Installation
+- [Setup](#setup)
+- [Usage](#usage)
+  - [Deploy Existing Netlify Functions to Nimbella Cloud](#Deploy-Existing-Netlify-Functions-to-Nimbella)
 
-Just add this to your netlify.toml:
+## Setup
 
-```toml
-[[plugins]]
-package = "netlify-plugin-nimbella"
-```
+Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
 
-Create an environmental variable named `NIMBELLA_LOGIN_TOKEN` with your [Nimbella](https://nimbella.com/signup) auth token using any of the channels mentioned in this [guide](https://docs.netlify.com/configure-builds/environment-variables/#declare-variables).
+1. Add the Nimbella Add-on for Netlify
+
+   Run the below at the base of your local project directory linked to your Netlify site.
+
+   ```sh
+   $ netlify addons:create nimbella
+   ```
+
+2. Add Nimbella Build Plugin to Your Netlify Site
+
+   Append the below to your `netlify.toml`.
+
+   ```toml
+   [[plugins]]
+   package = "netlify-plugin-nimbella"
+   ```
 
 ## Usage
 
-Add a `functions` property as below to your `netlify.toml`. Make sure to remove `functions` property under `[build]` in your `netlify.toml`.
+This Build Plugin brings Nimbella Cloud to Netlify sites.
 
-```toml
-[nimbella]
-functions = "./functions" # Path to lambda functions directory
+### Deploy Existing Netlify Functions to Nimbella Cloud
+
+Remove functions property from [build] and add it under [nimbella].
+
+```diff
+# Settings in the [build] context are global and are applied to all contexts
+# unless otherwise overridden by more specific contexts.
+[build]
+-  # Directory with the serverless Lambda functions to deploy to AWS.
+-  functions = "functions/"
++ [nimbella]
++  functions = "functions/"
 ```
-
-You can create a `packages` directory at the root of your repository and `netlify-plugin-nimbella` will automatically deploy them during the build.
-
-Here's an example repo that uses `netlify-plugin-nimbella` plugin.
