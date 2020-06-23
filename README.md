@@ -10,7 +10,6 @@ A Netlify Build Plugin that extends Netlify Functions to support different runti
 
 - [Setup](#setup)
 - [Usage](#usage)
-  - [Deploy Existing Netlify Functions to Nimbella Cloud](#Deploy-Existing-Netlify-Functions-to-Nimbella)
 - [Support](#support)
 - [License](#license)
 
@@ -39,7 +38,9 @@ Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
 
 This Build Plugin brings Nimbella Cloud to Netlify sites.
 
-#### Deploy Existing Netlify Functions to Nimbella Cloud
+When you've a `packages` directory at base of your repository, this plugin will automatically deploy them and will create redirect rules so all requests to `/.netlify/functions/*` will be redirected to functions deployed on Nimbella.
+
+**Deploy Existing Netlify Functions to Nimbella Cloud**
 
 Remove functions property from `[build]` and add it under `[nimbella]` in your `netlify.toml`.
 
@@ -49,6 +50,8 @@ Remove functions property from `[build]` and add it under `[nimbella]` in your `
 + [nimbella]
 +  functions = "functions/"
 ```
+
+Checkout this [example](https://github.com/satyarohith/netlify-plugin-nimbella.netlify.app) to learn more.
 
 ## Support
 
