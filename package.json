@@ -2,7 +2,7 @@
   "name": "netlify-plugin-nimbella",
   "version": "0.0.0-dev.14",
   "main": "index.js",
-  "description": "A Netlify Build Plugin that extends Netlify Sites to support OpenWhisk functions using Nimbella Cloud.",
+  "description": "A Netlify Build Plugin that extends Netlify Sites to support serverless functions using Nimbella Cloud.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

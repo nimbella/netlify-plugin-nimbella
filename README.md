@@ -6,7 +6,7 @@
 [![Join Slack](https://img.shields.io/badge/join-slack-9B69A0.svg)](https://nimbella-community.slack.com/)
 [![Twitter](https://img.shields.io/twitter/follow/nimbella.svg?style=social&logo=twitter)](https://twitter.com/intent/follow?screen_name=nimbella)
 
-A Netlify Build Plugin that extends Netlify Sites to support OpenWhisk functions using [Nimbella Cloud](https://nimbella.com/product/platform).
+A Netlify Build Plugin that extends Netlify Sites to support serverless functions using [Nimbella Cloud](https://nimbella.com/product/platform).
 
 - [Setup](#setup)
 - [Usage](#usage)
