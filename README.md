@@ -6,7 +6,7 @@
 [![Join Slack](https://img.shields.io/badge/join-slack-9B69A0.svg)](https://nimbella-community.slack.com/)
 [![Twitter](https://img.shields.io/twitter/follow/nimbella.svg?style=social&logo=twitter)](https://twitter.com/intent/follow?screen_name=nimbella)
 
-A Netlify Build Plugin that extends Netlify Functions to support different runtimes using [Nimbella Cloud](https://nimbella.com/product/platform).
+A Netlify Build Plugin that extends Netlify Sites to support OpenWhisk functions using [Nimbella Cloud](https://nimbella.com/product/platform).
 
 - [Setup](#setup)
 - [Usage](#usage)
@@ -36,22 +36,36 @@ Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
 
 ## Usage
 
-This Build Plugin brings Nimbella Cloud to Netlify sites.
+All we need is a directory named `packages` at the base of your repository. The plugin will automatically deploy functions inside `packages` and will also create redirect rules so all requests to `/api/*` will be redirected to functions deployed on Nimbella.
 
-When you've a `packages` directory at base of your repository, this plugin will automatically deploy them and will create redirect rules so all requests to `/.netlify/functions/*` will be redirected to functions deployed on Nimbella.
+For example, let's imagine the following structure:
 
-**Deploy Existing Netlify Functions to Nimbella Cloud**
-
-Remove functions property from `[build]` and add it under `[nimbella]` in your `netlify.toml`.
-
-```diff
-[build]
--  functions = "functions/"
-+ [nimbella]
-+  functions = "functions/"
+```
+site
+├── netlify.toml
+├── packages
+│   ├── auth
+│   │   ├── login.js
+│   │   └── logout.js
+│   └── todos
+│       ├── create.js
+│       ├── delete.js
+│       ├── list.js
+│       └── update.js
+└── public
+    └── index.html
 ```
 
+To invoke the function `login`, we would make a request to`https://your-site.com/api/auth/login` (i.e. we need to prefix the package name `auth` to invoke the function `login`.)
+
 Checkout this [example](https://github.com/satyarohith/netlify-plugin-nimbella.netlify.app) to learn more.
+
+You can also change the base prefix `/api/` by specifying it in `netlify.toml`:
+
+```toml
+[nimbella]
+path = '/backend/' # default /api/
+```
 
 ## Support
 
