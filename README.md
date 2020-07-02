@@ -36,7 +36,7 @@ Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
 
 ## Usage
 
-All we need is a directory named `packages` at the base of your repository. The plugin will automatically deploy functions inside `packages` and will also create redirect rules so all requests to `/api/*` will be redirected to functions deployed on Nimbella.
+All we need is a directory named `packages` at the base of your repository. The plugin will automatically deploy functions inside `packages` and will also create redirect rules so all requests to `/.netlify/functions/*` will be redirected to functions deployed on Nimbella.
 
 For example, let's imagine the following structure:
 
@@ -56,16 +56,35 @@ site
     └── index.html
 ```
 
-To invoke the function `login`, we would make a request to`https://your-site.com/api/auth/login` (i.e. we need to prefix the package name `auth` to invoke the function `login`.)
+To invoke the function `login`, we would make a request to`https://your-site.com/.netlify/functions/auth/login` (i.e. we need to prefix the package name `auth` to invoke the function `login`.)
 
 Checkout this [example](https://github.com/satyarohith/netlify-plugin-nimbella.netlify.app) to learn more.
 
-You can also change the base prefix `/api/` by specifying it in `netlify.toml`:
+You can also change the base prefix `/.netlify/functions/` by specifying it in `netlify.toml`:
 
 ```toml
 [nimbella]
-path = '/backend/' # default /api/
+path = '/api/' # default /.netlify/functions/
 ```
+
+**How to deploy Netlify Functions to Nimbella Cloud**
+
+You can deploy your existing Netlify Functions to Nimbella Cloud with very minimal changes.
+
+Move the `functions` property under `build` to `nimbella` inside `netlify.toml`.
+
+```diff
+[build]
+-functions = './functions'
++[nimbella]
++functions = './functions' # Source directory
+```
+
+This plugin builds your functions using a modified version of [netlify-lambda](https://github.com/netlify/netlify-lambda). You can get rid of any build steps you're performing on functions since the plugin handles it for you.
+
+All enviroment variables present in the build runtime during Netlify build (except `CI` and `NETLIFY`) are made availabe to the deployed functions on Nimbella Cloud.
+
+**Note:** When you're using `packages` along with functions, make sure to apend "default" to `.netlify/funcitons` to invoke the functions as all functions are deployed under `default` package inside your namespace.
 
 ## Support
 
