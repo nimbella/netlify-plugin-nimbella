@@ -10,6 +10,8 @@ A Netlify Build Plugin that extends Netlify Sites to support serverless function
 
 - [Setup](#setup)
 - [Usage](#usage)
+  - [Use Nimbella Projects with Netlify Sites](#Use-Nimbella-Projects-with-Netlify-Sites)
+  - [Deploy Netlify Functions on Nimbella Cloud](#Deploy-Netlify-Functions-on-Nimbella-Cloud)
 - [Support](#support)
 - [License](#license)
 
@@ -36,7 +38,11 @@ Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
 
 ## Usage
 
-All we need is a directory named `packages` at the base of your repository. The plugin will automatically deploy functions inside `packages` and will also create redirect rules so all requests to `/.netlify/functions/*` will be redirected to functions deployed on Nimbella.
+Learn how to structure your repository and `netlify.toml` for this plugin to deploy your functions on Nimbella Cloud.
+
+#### Use Nimbella Projects with Netlify Sites
+
+All we need is a directory named `packages` at the base of your repository. The plugin will automatically deploy the packages inside `packages` and will also create redirect rules so all requests to `/.netlify/functions/*` will be redirected to functions (actions) deployed on Nimbella.
 
 For example, let's imagine the following structure:
 
@@ -56,18 +62,16 @@ site
     └── index.html
 ```
 
-To invoke the function `login`, we would make a request to`https://your-site.com/.netlify/functions/auth/login` (i.e. we need to prefix the package name `auth` to invoke the function `login`.)
+To invoke the function `login`, we would make a request to `https://your-site.com/.netlify/functions/auth/login` (i.e. we need to prefix the package name `auth` to invoke the function `login`.)
 
-Checkout this [example](https://github.com/satyarohith/netlify-plugin-nimbella.netlify.app) to learn more.
-
-You can also change the base prefix `/.netlify/functions/` by specifying it in `netlify.toml`:
+If you're using Netlify Functions, you need to change the base prefix `/.netlify/functions/` to something different (e.g. `/api/`) in `netlify.toml` so Netlify Functions can be accessed using `/.netlify/functions/` route and Nimbella Functions can be accessed using `/api/` route.
 
 ```toml
 [nimbella]
-path = '/api/' # default /.netlify/functions/
+path = '/api/' # default /.netlify/functions/.
 ```
 
-**How to deploy Netlify Functions to Nimbella Cloud**
+#### Deploy Netlify Functions on Nimbella Cloud
 
 You can deploy your existing Netlify Functions to Nimbella Cloud with very minimal changes.
 
