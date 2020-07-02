@@ -112,10 +112,16 @@ module.exports = {
       });
     }
 
-    // Add a Netlify redirect rule to redirect api calls to Nimbella.
-    const redirectRule = `${
+    let redirectRule = `${
       config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
     }* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!\n`;
+
+    // if the repository also uses packages do not append "default".
+    if (isProject) {
+      redirectRule = `${
+        config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
+      }* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!\n`;
+    }
 
     await appendFile(join(constants.PUBLISH_DIR, '_redirects'), redirectRule);
   }
