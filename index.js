@@ -112,17 +112,45 @@ module.exports = {
       });
     }
 
-    let redirectRule = `${
-      config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
-    }* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!\n`;
+    const redirectRules = [];
 
-    // if the repository also uses packages do not append "default".
-    if (isProject) {
-      redirectRule = `${
-        config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
-      }* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!\n`;
+    // TODO(satyarohith): read rules from _redirects and rewrite them accordingly.
+    if (config.redirects) {
+      console.log(
+        'Found redirect rules in netlify.toml. We might rewrite rules that redirect to /.netlify/functions/*'
+      );
+
+      for (const redirect of config.redirects) {
+        if ((redirect.status = 200)) {
+          if (redirect.to.startsWith('/.netlify/functions/')) {
+            const redirectPath = redirect.to.split('/.netlify/functions/')[1];
+            redirectRules.push(
+              `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
+            );
+          }
+        }
+      }
     }
 
-    await appendFile(join(constants.PUBLISH_DIR, '_redirects'), redirectRule);
+    if (isProject) {
+      redirectRules.push(
+        `${
+          config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
+        }* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
+      );
+    }
+
+    if (isActions && !isProject) {
+      redirectRules.push(
+        `${
+          config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
+        }* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
+      );
+    }
+
+    await appendFile(
+      join(constants.PUBLISH_DIR, '_redirects'),
+      redirectRules.join('\n')
+    );
   }
 };
