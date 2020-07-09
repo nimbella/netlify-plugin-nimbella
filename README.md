@@ -17,6 +17,8 @@ A Netlify Build Plugin that extends Netlify Sites to support serverless function
 
 ## Setup
 
+> **Note:** Build Plugins are not available on the legacy "Ubuntu Trusty 14.04" build image. Update your Netlify build image to "Ubuntu Xenial 16.04".
+
 Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
 
 1. **Add the Nimbella Add-on for Netlify**
