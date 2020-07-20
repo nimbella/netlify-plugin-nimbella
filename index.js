@@ -23,16 +23,28 @@ async function deployProject(run) {
  * @param {function} run - function provided under utils by Netlify to build event functions.
  * @param {string} functionsDir - Path to the actions directory.
  */
-async function deployActions({run, functionsDir, secretsPath}) {
+async function deployActions({
+  run,
+  functionsDir,
+  secretsPath,
+  timeout,
+  memory
+}) {
   const files = await readdir(functionsDir);
   for (const file of files) {
     // Deploy
     console.log(`Deploying ${file}...`);
-    const {stderr, exitCode} = await run.command(
+    const {
+      stdout,
+      stderr,
+      exitCode
+    } = await run.command(
       `${nim} action update ${file.split('.')[0]} ${join(
         functionsDir,
         file
-      )} --kind nodejs-lambda:10 --main handler --web=raw --env-file=${secretsPath}`,
+      )} ` +
+        `--kind nodejs-lambda:10 --main handler --web=raw --env-file=${secretsPath} ` +
+        `--timeout=${Number(timeout)} --memory=${Number(memory)}`,
       {reject: false, stdout: 'ignore'}
     );
 
@@ -92,12 +104,12 @@ module.exports = {
     const {stdout: namespace} = await utils.run.command(`${nim} auth current`);
 
     // Create env.json
-    const fs = require('fs');
+    const {writeFile} = require('fs').promises;
     const envs = {...process.env};
     // Remove CI related variables.
     delete envs.NETLIFY;
     delete envs.CI;
-    fs.writeFileSync('env.json', JSON.stringify(envs));
+    await writeFile('env.json', JSON.stringify(envs));
 
     if (isProject) {
       // TODO(satyarohith): Figure out how to export secrets while deploying as a project.
@@ -108,7 +120,9 @@ module.exports = {
       await deployActions({
         run: utils.run,
         functionsDir: functionsBuildDir,
-        secretsPath: join(process.cwd(), 'env.json')
+        secretsPath: join(process.cwd(), 'env.json'),
+        timeout: config.nimbella.timeout || 6000, // default is 10 seconds
+        memory: config.nimbella.memory || 256 // default is 256MB (max for free tier)
       });
     }
 
