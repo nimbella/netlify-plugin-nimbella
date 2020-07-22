@@ -59,7 +59,7 @@ async function deployActions({
 module.exports = {
   // Execute before build starts.
   onPreBuild: async ({utils, inputs, constants}) => {
-    if (!process.env.NIMBELLA_LOGIN_TOKEN && !inputs.nimbellaToken) {
+    if (!process.env.NIMBELLA_LOGIN_TOKEN) {
       utils.build.failBuild(
         'Nimbella login token not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
       );
@@ -72,9 +72,7 @@ module.exports = {
     // Login if not logged in before.
     if (!isLoggedIn) {
       await utils.run.command(
-        `${nim} auth login ${
-          process.env.NIMBELLA_LOGIN_TOKEN || inputs.nimbellaToken
-        }`
+        `${nim} auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
       );
 
       // Cache the nimbella config to avoid logging in for consecutive builds.
