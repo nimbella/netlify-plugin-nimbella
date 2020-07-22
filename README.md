@@ -9,6 +9,7 @@
 A Netlify Build Plugin that extends Netlify Sites to support serverless functions using [Nimbella Cloud](https://nimbella.com/product/platform).
 
 - [Setup](#setup)
+- [Inputs](#inputs)
 - [Usage](#usage)
   - [Use Nimbella Projects with Netlify Sites](#Use-Nimbella-Projects-with-Netlify-Sites)
   - [Deploy Netlify Functions on Nimbella Cloud](#Deploy-Netlify-Functions-on-Nimbella-Cloud)
@@ -37,6 +38,18 @@ Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
    [[plugins]]
    package = "netlify-plugin-nimbella"
    ```
+
+## Inputs
+
+This section describes the possible inputs that the plugin can accept.
+
+```toml
+[nimbella]
+functions = "functions" # Functions source directory. Use this if you would like to use Nimbella to deploy your functions.
+timeout = 6000 # Function timeout limit in milliseconds.
+memory = 256 # Function memory limit in MB.
+path = "/.netlify/functions/" # The prefix path to access your deployed packages. Change this if you're using both Netlify Functions and Nimbella for your backend.
+```
 
 ## Usage
 
