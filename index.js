@@ -1,5 +1,5 @@
 const {existsSync} = require('fs');
-const {appendFile, readFile, readdir} = require('fs').promises;
+const {appendFile, readFile, readdir, writeFile} = require('fs').promises;
 const {join} = require('path');
 const toml = require('@iarna/toml');
 const build = require('netlify-lambda/lib/build');
@@ -58,7 +58,7 @@ async function deployActions({
 
 module.exports = {
   // Execute before build starts.
-  onPreBuild: async ({utils, inputs, constants}) => {
+  onPreBuild: async ({utils, constants}) => {
     if (!process.env.NIMBELLA_LOGIN_TOKEN) {
       utils.build.failBuild(
         'Nimbella login token not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
@@ -102,7 +102,6 @@ module.exports = {
     const {stdout: namespace} = await utils.run.command(`${nim} auth current`);
 
     // Create env.json
-    const {writeFile} = require('fs').promises;
     const envs = {...process.env};
     // Remove CI related variables.
     delete envs.NETLIFY;
@@ -144,19 +143,20 @@ module.exports = {
       }
     }
 
+    let {path: redirectPath = '.netlify/functions'} = config.nimbella;
+    redirectPath = redirectPath.endsWith('/')
+      ? redirectPath
+      : redirectPath + '/';
+
     if (isProject) {
       redirectRules.push(
-        `${
-          config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
-        }* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
+        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
       );
     }
 
     if (isActions && !isProject) {
       redirectRules.push(
-        `${
-          config.nimbella.path ? config.nimbella.path : '.netlify/functions/'
-        }* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
+        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
       );
     }
 
