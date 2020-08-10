@@ -10,6 +10,9 @@ let isActions = false;
 const functionsBuildDir = `functions-build-${Date.now()}`;
 const nim = `npx -p https://preview-apigcp.nimbella.io/nimbella-cli.tgz nim`;
 
+// Disable auto updates of nim.
+process.env.NIM_DISABLE_AUTOUPDATE = '1';
+
 /**
  * Deploy a Nimbella Project.
  * @param {*} run - function provided under utils by Netlify to build event functions.
