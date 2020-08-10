@@ -2,6 +2,7 @@ const {existsSync} = require('fs');
 const {appendFile, readFile, readdir, writeFile} = require('fs').promises;
 const {join} = require('path');
 const toml = require('@iarna/toml');
+const cpx = require('cpx');
 const build = require('netlify-lambda/lib/build');
 
 let config = {};
@@ -35,21 +36,22 @@ async function deployActions({
 }) {
   const files = await readdir(functionsDir);
   for (const file of files) {
+    const [actionName, extension] = file.split('.');
+    let command =
+      `${nim} action update ${actionName} ${join(functionsDir, file)} ` +
+      `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
+      `--web=raw --env-file=${secretsPath} `;
+
+    if (extension === 'js') {
+      command += '--kind nodejs-lambda:10 --main handler';
+    }
+
     // Deploy
     console.log(`Deploying ${file}...`);
-    const {
-      stdout,
-      stderr,
-      exitCode
-    } = await run.command(
-      `${nim} action update ${file.split('.')[0]} ${join(
-        functionsDir,
-        file
-      )} ` +
-        `--kind nodejs-lambda:10 --main handler --web=raw --env-file=${secretsPath} ` +
-        `--timeout=${Number(timeout)} --memory=${Number(memory)}`,
-      {reject: false, stdout: 'ignore'}
-    );
+    const {stdout, stderr, exitCode} = await run.command(command, {
+      reject: false,
+      stdout: 'ignore'
+    });
 
     if (exitCode === 0) {
       console.log('done.');
@@ -95,6 +97,8 @@ module.exports = {
         // Here we're passing the build directory instead of source because source is extracted from config.nimbella.functions.
         const stats = await build.run(functionsBuildDir);
         console.log(stats.toString(stats.compilation.options.stats));
+        // Copy any files that do not end with .js. T
+        cpx.copy(config.nimbella.functions + '/**/*.!(js)', functionsBuildDir);
       }
     } catch (error) {
       utils.build.failBuild(error.message);
