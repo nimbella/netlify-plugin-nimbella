@@ -73,17 +73,17 @@ module.exports = {
     const nimConfig = join(process.env.HOME, '.nimbella');
     await utils.cache.restore(nimConfig);
 
-    const isLoggedIn = existsSync(nimConfig);
+    const loggedIn = existsSync(nimConfig);
     // Login if not logged in before.
-    if (!isLoggedIn) {
+    if (loggedIn) {
+      console.log('Using cached auth credentials.');
+    } else {
       await utils.run.command(
         `${nim} auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
       );
 
       // Cache the nimbella config to avoid logging in for consecutive builds.
       await utils.cache.save(nimConfig);
-    } else {
-      console.log('Using cached auth credentials.');
     }
 
     config = toml.parse(await readFile(constants.CONFIG_PATH));
@@ -125,8 +125,8 @@ module.exports = {
         run: utils.run,
         functionsDir: functionsBuildDir,
         secretsPath: join(process.cwd(), 'env.json'),
-        timeout: config.nimbella.timeout || 6000, // default is 10 seconds
-        memory: config.nimbella.memory || 256 // default is 256MB (max for free tier)
+        timeout: config.nimbella.timeout || 6000, // Default is 10 seconds
+        memory: config.nimbella.memory || 256 // Default is 256MB (max for free tier)
       });
     }
 
@@ -139,7 +139,7 @@ module.exports = {
       );
 
       for (const redirect of config.redirects) {
-        if ((redirect.status = 200)) {
+        if (redirect.status === 200) {
           if (redirect.to.startsWith('/.netlify/functions/')) {
             const redirectPath = redirect.to.split('/.netlify/functions/')[1];
             redirectRules.push(

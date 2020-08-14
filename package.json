@@ -5,7 +5,7 @@
   "description": "A Netlify Build Plugin that extends Netlify Sites to support serverless functions using Nimbella Cloud.",
   "scripts": {
     "setup": "yarn install && yarn install --cwd=netlify-lambda",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "xo"
   },
   "repository": {
     "type": "git",
@@ -29,5 +29,12 @@
     "@iarna/toml": "^2.2.5",
     "cpx": "^1.5.0",
     "netlify-lambda": "satyarohith/netlify-lambda#master"
+  },
+  "xo": {
+    "space": true,
+    "prettier": true
+  },
+  "devDependencies": {
+    "xo": "^0.33.0"
   }
 }
