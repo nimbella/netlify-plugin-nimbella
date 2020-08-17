@@ -64,31 +64,35 @@ async function deployActions({
 module.exports = {
   // Execute before build starts.
   onPreBuild: async ({utils, constants}) => {
-    if (!process.env.NIMBELLA_LOGIN_TOKEN) {
-      utils.build.failBuild(
-        'Nimbella login token not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
-      );
+    try {
+      if (!process.env.NIMBELLA_LOGIN_TOKEN) {
+        utils.build.failBuild(
+          'Nimbella login token not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
+        );
+      }
+
+      const nimConfig = join(process.env.HOME, '.nimbella');
+      await utils.cache.restore(nimConfig);
+
+      const loggedIn = existsSync(nimConfig);
+      // Login if not logged in before.
+      if (loggedIn) {
+        console.log('Using cached auth credentials.');
+      } else {
+        await utils.run.command(
+          `${nim} auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
+        );
+
+        // Cache the nimbella config to avoid logging in for consecutive builds.
+        await utils.cache.save(nimConfig);
+      }
+
+      config = toml.parse(await readFile(constants.CONFIG_PATH));
+      isProject = existsSync('packages');
+      isActions = existsSync(config.nimbella.functions);
+    } catch (error) {
+      utils.build.failBuild(error.message);
     }
-
-    const nimConfig = join(process.env.HOME, '.nimbella');
-    await utils.cache.restore(nimConfig);
-
-    const loggedIn = existsSync(nimConfig);
-    // Login if not logged in before.
-    if (loggedIn) {
-      console.log('Using cached auth credentials.');
-    } else {
-      await utils.run.command(
-        `${nim} auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
-      );
-
-      // Cache the nimbella config to avoid logging in for consecutive builds.
-      await utils.cache.save(nimConfig);
-    }
-
-    config = toml.parse(await readFile(constants.CONFIG_PATH));
-    isProject = existsSync('packages');
-    isActions = existsSync(config.nimbella.functions);
   },
   // Build the functions
   onBuild: async ({utils}) => {
@@ -106,29 +110,31 @@ module.exports = {
   },
   // Execute after build is done.
   onPostBuild: async ({constants, utils}) => {
-    const {stdout: namespace} = await utils.run.command(`${nim} auth current`);
+    try {
+      const {stdout: namespace} = await utils.run.command(
+        `${nim} auth current`
+      );
 
-    // Create env.json
-    const envs = {...process.env};
-    // Remove CI related variables.
-    delete envs.NETLIFY;
-    delete envs.CI;
-    await writeFile('env.json', JSON.stringify(envs));
+      // Create env.json
+      const envs = {...process.env};
+      // Remove CI related variables.
+      delete envs.NETLIFY;
+      delete envs.CI;
+      await writeFile('env.json', JSON.stringify(envs));
 
-    if (isProject) {
-      // TODO(satyarohith): Figure out how to export secrets while deploying as a project.
-      await deployProject(utils.run);
-    }
+      if (isProject) {
+        await deployProject(utils.run);
+      }
 
-    if (isActions) {
-      await deployActions({
-        run: utils.run,
-        functionsDir: functionsBuildDir,
-        secretsPath: join(process.cwd(), 'env.json'),
-        timeout: config.nimbella.timeout || 6000, // Default is 10 seconds
-        memory: config.nimbella.memory || 256 // Default is 256MB (max for free tier)
-      });
-    }
+      if (isActions) {
+        await deployActions({
+          run: utils.run,
+          functionsDir: functionsBuildDir,
+          secretsPath: join(process.cwd(), 'env.json'),
+          timeout: config.nimbella.timeout || 6000, // Default is 10 seconds
+          memory: config.nimbella.memory || 256 // Default is 256MB (max for free tier)
+        });
+      }
 
       const redirectRules = [];
       const redirects = [];
@@ -161,26 +167,26 @@ module.exports = {
         }
       }
 
-    let {path: redirectPath = '.netlify/functions'} = config.nimbella;
-    redirectPath = redirectPath.endsWith('/')
-      ? redirectPath
-      : redirectPath + '/';
+      let {path: redirectPath = '.netlify/functions'} = config.nimbella;
+      redirectPath = redirectPath.endsWith('/')
+        ? redirectPath
+        : redirectPath + '/';
 
-    if (isProject) {
-      redirectRules.push(
-        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
-      );
+      if (isProject) {
+        redirectRules.push(
+          `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
+        );
+      }
+
+      if (isActions && !isProject) {
+        redirectRules.push(
+          `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
+        );
+      }
+
+      await appendFile(redirectsFile, redirectRules.join('\n'));
+    } catch (error) {
+      utils.build.failBuild(error.message);
     }
-
-    if (isActions && !isProject) {
-      redirectRules.push(
-        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
-      );
-    }
-
-    await appendFile(
-      join(constants.PUBLISH_DIR, '_redirects'),
-      redirectRules.join('\n')
-    );
   }
 };
