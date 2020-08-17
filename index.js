@@ -130,15 +130,27 @@ module.exports = {
       });
     }
 
-    const redirectRules = [];
+      const redirectRules = [];
+      const redirects = [];
+      const redirectsFile = join(constants.PUBLISH_DIR, '_redirects');
 
-    // TODO(satyarohith): read rules from _redirects and rewrite them accordingly.
-    if (config.redirects) {
-      console.log(
-        'Found redirect rules in netlify.toml. We might rewrite rules that redirect to /.netlify/functions/*'
-      );
+      if (existsSync(redirectsFile)) {
+        console.log(
+          "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+        );
+        const {parseRedirectsFormat} = require('netlify-redirect-parser');
+        const {success} = await parseRedirectsFormat(redirectsFile);
+        redirects.push(...success);
+      }
 
-      for (const redirect of config.redirects) {
+      if (config.redirects) {
+        console.log(
+          "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+        );
+        redirects.push(...config.redirects);
+      }
+
+      for (const redirect of redirects) {
         if (redirect.status === 200) {
           if (redirect.to.startsWith('/.netlify/functions/')) {
             const redirectPath = redirect.to.split('/.netlify/functions/')[1];
@@ -148,7 +160,6 @@ module.exports = {
           }
         }
       }
-    }
 
     let {path: redirectPath = '.netlify/functions'} = config.nimbella;
     redirectPath = redirectPath.endsWith('/')

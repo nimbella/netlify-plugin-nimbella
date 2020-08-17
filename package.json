@@ -28,7 +28,8 @@
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "cpx": "^1.5.0",
-    "netlify-lambda": "satyarohith/netlify-lambda#master"
+    "netlify-lambda": "satyarohith/netlify-lambda#master",
+    "netlify-redirect-parser": "^2.5.0"
   },
   "xo": {
     "space": true,
