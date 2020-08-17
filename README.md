@@ -13,6 +13,7 @@ A Netlify Build Plugin that extends Netlify Sites to support serverless function
 - [Usage](#usage)
   - [Use Nimbella Projects with Netlify Sites](#Use-Nimbella-Projects-with-Netlify-Sites)
   - [Deploy Netlify Functions on Nimbella Cloud](#Deploy-Netlify-Functions-on-Nimbella-Cloud)
+- [Examples](#examples)
 - [Support](#support)
 - [License](#license)
 
@@ -103,7 +104,17 @@ This plugin builds your functions using a modified version of [netlify-lambda](h
 
 All enviroment variables present in the build runtime during Netlify build (except `CI` and `NETLIFY`) are made availabe to the deployed functions on Nimbella Cloud.
 
-**Note:** When you're using `packages` along with functions, make sure to apend "default" to `.netlify/funcitons` to invoke the functions as all functions are deployed under `default` package inside your namespace.
+**Note:** When you're using `packages` along with functions, make sure to apend "default" to `.netlify/funcitons` to invoke the functions as all functions are deployed under `default` package of your namespace.
+
+## Examples
+
+These are few sites that use `netlify-plugin-nimbella` to deploy frontend content to Netlify and functions on Nimbella.
+
+- [`netlify-plugin-nimbella.netlify.app`](https://github.com/satyarohith/netlify-plugin-nimbella.netlify.app)
+- [`netlify-nimbella-faunadb.netlify.app`](https://github.com/satyarohith/netlify-nimbella-faunadb-example)
+- [`netlify-nimbella-ocr.netlify.app`](https://github.com/satyarohith/netlify-nimbella-ocr)
+
+Look at `netlify.toml` of these repositories to get an idea on how the plugin is used.
 
 ## Support
 
