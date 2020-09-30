@@ -8,6 +8,8 @@
 
 A Netlify Build Plugin that extends Netlify Sites to support serverless functions using [Nimbella Cloud](https://nimbella.com/product/platform).
 
+Learn more about Nimbella's integration for Netlify from [here](https://nimbella.com/integrations/netlify).
+
 - [Setup](#setup)
 - [Inputs](#inputs)
 - [Usage](#usage)
@@ -57,6 +59,8 @@ path = "/.netlify/functions/" # The prefix path to access your deployed packages
 Learn how to structure your repository and `netlify.toml` for this plugin to deploy your functions on Nimbella Cloud.
 
 #### Use Nimbella Projects with Netlify Sites
+
+> Learn about Nimbella projects [here](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment)
 
 All we need is a directory named `packages` at the base of your repository. The plugin will automatically deploy the packages inside `packages` and will also create redirect rules so all requests to `/.netlify/functions/*` will be redirected to functions (actions) deployed on Nimbella.
 

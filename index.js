@@ -111,10 +111,6 @@ module.exports = {
   // Execute after build is done.
   onPostBuild: async ({constants, utils}) => {
     try {
-      const {stdout: namespace} = await utils.run.command(
-        `${nim} auth current`
-      );
-
       // Create env.json
       const envs = {...process.env};
       // Remove CI related variables.
@@ -161,7 +157,7 @@ module.exports = {
           if (redirect.to.startsWith('/.netlify/functions/')) {
             const redirectPath = redirect.to.split('/.netlify/functions/')[1];
             redirectRules.push(
-              `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
+              `${redirect.from} /.netlify/nimbella/default/${redirectPath} 200!`
             );
           }
         }
@@ -173,14 +169,12 @@ module.exports = {
         : redirectPath + '/';
 
       if (isProject) {
-        redirectRules.push(
-          `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
-        );
+        redirectRules.push(`${redirectPath}* /.netlify/nimbella/:splat 200!`);
       }
 
       if (isActions && !isProject) {
         redirectRules.push(
-          `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
+          `${redirectPath}* /.netlify/nimbella/default/:splat 200!`
         );
       }
 
