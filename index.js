@@ -157,7 +157,7 @@ module.exports = {
           if (redirect.to.startsWith('/.netlify/functions/')) {
             const redirectPath = redirect.to.split('/.netlify/functions/')[1];
             redirectRules.push(
-              `${redirect.from} /.netlify/nimbella/default/${redirectPath} 200!`
+              `${redirect.from} /.netlify/nimbella/default/${redirectPath} 301!`
             );
           }
         }
@@ -169,12 +169,12 @@ module.exports = {
         : redirectPath + '/';
 
       if (isProject) {
-        redirectRules.push(`${redirectPath}* /.netlify/nimbella/:splat 200!`);
+        redirectRules.push(`${redirectPath}* /.netlify/nimbella/:splat 301!`);
       }
 
       if (isActions && !isProject) {
         redirectRules.push(
-          `${redirectPath}* /.netlify/nimbella/default/:splat 200!`
+          `${redirectPath}* /.netlify/nimbella/default/:splat 301!`
         );
       }
 
