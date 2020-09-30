@@ -114,9 +114,9 @@ All enviroment variables present in the build runtime during Netlify build (exce
 
 These are few sites that use `netlify-plugin-nimbella` to deploy frontend content to Netlify and functions on Nimbella.
 
-- [`netlify-plugin-nimbella.netlify.app`](https://github.com/satyarohith/netlify-plugin-nimbella.netlify.app)
-- [`netlify-nimbella-faunadb.netlify.app`](https://github.com/satyarohith/netlify-nimbella-faunadb-example)
-- [`netlify-nimbella-ocr.netlify.app`](https://github.com/satyarohith/netlify-nimbella-ocr)
+- [`netlify-plugin-nimbella.netlify.app`](https://github.com/nimbella/netlify-plugin-nimbella.netlify.app)
+- [`netlify-nimbella-faunadb.netlify.app`](https://github.com/nimbella/netlify-nimbella-faunadb-example)
+- [`netlify-nimbella-ocr.netlify.app`](https://github.com/nimbella/netlify-nimbella-ocr)
 
 Look at `netlify.toml` of these repositories to get an idea on how the plugin is used.
 
