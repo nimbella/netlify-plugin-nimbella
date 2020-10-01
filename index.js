@@ -9,7 +9,7 @@ let config = {};
 let isProject = false;
 let isActions = false;
 const functionsBuildDir = `functions-build-${Date.now()}`;
-const nim = `npx -p https://preview-apigcp.nimbella.io/nimbella-cli.tgz nim`;
+const nim = `npx -p https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz nim`;
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1';

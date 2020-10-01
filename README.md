@@ -6,9 +6,7 @@
 [![Join Slack](https://img.shields.io/badge/join-slack-9B69A0.svg)](https://nimbella-community.slack.com/)
 [![Twitter](https://img.shields.io/twitter/follow/nimbella.svg?style=social&logo=twitter)](https://twitter.com/intent/follow?screen_name=nimbella)
 
-A Netlify Build Plugin that extends Netlify Sites to support serverless functions using [Nimbella Cloud](https://nimbella.com/product/platform).
-
-Learn more about Nimbella's integration for Netlify from [here](https://nimbella.com/integrations/netlify).
+A Netlify Build Plugin that extends Netlify Sites with support for portable and stateful serverless functions using [Nimbella Cloud](https://nimbella.com/product/platform).
 
 - [Setup](#setup)
 - [Inputs](#inputs)
