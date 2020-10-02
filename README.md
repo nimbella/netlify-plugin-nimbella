@@ -58,7 +58,7 @@ Once your add-on is configured, you need to add the Nimbella Build Plugin to You
 package = "netlify-plugin-nimbella"
 ```
 
-You may provide additional configuration in the `netlify.tome` file to configure the resources available to your serverless functions or the API path for your functions. Here is an example configuration.
+You may provide additional configuration in the `netlify.toml` file to configure the resources available to your serverless functions, or to configure the API path for your functions. Here is an example.
 
 ```toml
 [nimbella]
