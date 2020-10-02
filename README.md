@@ -8,7 +8,11 @@
 
 A Netlify Build Plugin that extends Netlify Sites with support for portable and stateful serverless functions using [Nimbella Cloud](https://nimbella.com/product/platform).
 
+Learn more about Nimbella's integration for Netlify from [here](https://nimbella.com/integrations/netlify).
+
 - [Setup](#setup)
+  - [New to Nimbella](#New-to-Nimbella)
+  - [Existing Nimbella User](#Existing-Nimbella-User)
 - [Inputs](#inputs)
 - [Usage](#usage)
   - [Use Nimbella Projects with Netlify Sites](#Use-Nimbella-Projects-with-Netlify-Sites)
@@ -21,6 +25,8 @@ A Netlify Build Plugin that extends Netlify Sites with support for portable and 
 
 > **Note:** Build Plugins are not available on the legacy "Ubuntu Trusty 14.04" build image. Update your Netlify build image to "Ubuntu Xenial 16.04".
 
+### New to Nimbella
+
 Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
 
 1. **Add the Nimbella Add-on for Netlify**
@@ -30,6 +36,31 @@ Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
    ```sh
    $ netlify addons:create nimbella
    ```
+   The addon will create a namespace where your resources reside. You can claim the namespace by running `netlify addons:auth nimbella`.
+
+2. **Add Nimbella Build Plugin to Your Netlify Site**
+
+   Append the below to your `netlify.toml`.
+
+   ```toml
+   [[plugins]]
+   package = "netlify-plugin-nimbella"
+   ```
+
+### Existing Nimbella User
+
+Existing users need to create a Netlify Build environment variable so the plugin can deploy the resources under their account. Follow the steps below to use your existing account with the plugin.
+
+1. **Create Netlify Build Environment Variable**
+
+   Make sure you have the [Nimbella CLI `nim`](https://nimbella.io/downloads/nim/nim.html) installed. You can do that from the CLI web page or by visiting [`nimbella.com/login`](https://nimbella.com/login) to login.
+
+   Generate a token using the CLI by running the following command:
+   ```bash
+   nim auth export --non-expiring
+   ```
+
+   Next, visit [`https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment`](https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment) to create an environment variable named `NIMBELLA_LOGIN_TOKEN` with your the token you just obtained.
 
 2. **Add Nimbella Build Plugin to Your Netlify Site**
 
