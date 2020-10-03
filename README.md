@@ -10,7 +10,7 @@ A Netlify Build Plugin that extends Netlify Sites with support for portable and 
 
 Learn more about Nimbella's integration for Netlify from [here](https://nimbella.com/integrations/netlify).
 
-- [Add-On Setup](#setup)
+- [Add-On Setup](##add-on-setup)
   - [New to Nimbella](#New-to-Nimbella)
   - [Existing Nimbella User](#Existing-Nimbella-User)
   - [Minimal Netlify TOML Configuration](#Minimal-Netlify-TOML-Configuration)
