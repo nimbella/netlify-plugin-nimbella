@@ -6,74 +6,59 @@
 [![Join Slack](https://img.shields.io/badge/join-slack-9B69A0.svg)](https://nimbella-community.slack.com/)
 [![Twitter](https://img.shields.io/twitter/follow/nimbella.svg?style=social&logo=twitter)](https://twitter.com/intent/follow?screen_name=nimbella)
 
-A Netlify Build Plugin that extends Netlify Sites with support for portable and stateful serverless functions using [Nimbella Cloud](https://nimbella.com/product/platform).
+A Netlify Build Plugin that extends Netlify Sites with support for portable and stateful serverless functions using [Nimbella](https://nimbella.com/product/platform). The add-on enables Netlify developers to deploy serverless functions and stateful APIs to the Nimbella cloud 1) with more programming language choices, 2) easier packaging, 3) customizable runtimes and durations, and 4) cloud portability. 
 
 Learn more about Nimbella's integration for Netlify from [here](https://nimbella.com/integrations/netlify).
 
-- [Setup](#setup)
-  - [New to Nimbella](#New-to-Nimbella)
-  - [Existing Nimbella User](#Existing-Nimbella-User)
-- [Inputs](#inputs)
+- [Add-On Setup](#add-on-setup)
+  - [New to Nimbella](#new-to-nimbella)
+  - [Existing Nimbella User](#existing-nimbella-developer)
+  - [Minimal Netlify TOML Configuration](#minimal-netlify-toml-configuration)
 - [Usage](#usage)
-  - [Use Nimbella Projects with Netlify Sites](#Use-Nimbella-Projects-with-Netlify-Sites)
-  - [Deploy Netlify Functions on Nimbella Cloud](#Deploy-Netlify-Functions-on-Nimbella-Cloud)
+  - [Use Nimbella Projects with Netlify Sites](#use-nimbella-projects-with-netlify-sites)
+  - [Deploy Netlify Functions on Nimbella Cloud](#deploy-netlify-functions-on-nimbella-cloud)
 - [Examples](#examples)
 - [Support](#support)
 - [License](#license)
 
-## Setup
+## Add-On Setup
 
-> **Note:** Build Plugins are not available on the legacy "Ubuntu Trusty 14.04" build image. Update your Netlify build image to "Ubuntu Xenial 16.04".
+> **Note:** Netlify Build Plugins are not available on the legacy "Ubuntu Trusty 14.04" build image. Update your Netlify build image to "Ubuntu Xenial 16.04".
 
 ### New to Nimbella
 
-Use Netlify addon `nimbella` to connect your Netlify site to Nimbella.
+Add the Nimbella add-on for Netlify to connect your Netlify site to Nimbella.
+To do that, run the following command from the base of your local project directory which is linked to your Netlify site.
+```sh
+netlify addons:create nimbella
+```
 
-1. **Add the Nimbella Add-on for Netlify**
+The addon will create a Nimbella namespace where your resources are allocated. Your Nimbella namespace includes your serverless functions, a dedicated key-value store, and access to an integrated object store.
 
-   Run the below at the base of your local project directory linked to your Netlify site.
+You may claim the namespace and login to your Nimbella account by running `netlify addons:auth nimbella`.
 
-   ```sh
-   $ netlify addons:create nimbella
-   ```
-   The addon will create a namespace where your resources reside. You can claim the namespace by running `netlify addons:auth nimbella`.
+### Existing Nimbella Developer
 
-2. **Add Nimbella Build Plugin to Your Netlify Site**
+You can use the Nimbella add-on for Netlify with your existing Nimbella account. This is accomplished by creating a Netlify Build environment variable so the plugin can deploy the resources to the Nimbella namespace of your choosing.
 
-   Append the below to your `netlify.toml`.
+1. You will need to you the [Nimbella CLI `nim`](https://nimbella.io/downloads/nim/nim.html) or the [Nimbella Workbench](https://nimbella.io/wb) to export a login token to run the command shown below. If you want to sign up for a free Nimbella account or to login, visit [`nimbella.com/login`](https://nimbella.com/login)) to get started.
 
-   ```toml
-   [[plugins]]
-   package = "netlify-plugin-nimbella"
-   ```
+```sh
+nim auth export --non-expiring
+```
 
-### Existing Nimbella User
+2. Next, visit [`https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment`](https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment) to create an environment variable named `NIMBELLA_LOGIN_TOKEN` and provide the the token you just obtained as its value.
 
-Existing users need to create a Netlify Build environment variable so the plugin can deploy the resources under their account. Follow the steps below to use your existing account with the plugin.
+### Minimal Netlify TOML Configuration
 
-1. **Create Netlify Build Environment Variable**
+Once your add-on is configured, you need to add the Nimbella Build Plugin to Your Netlify Site. This is done by appending the section below to your `netlify.toml` file.
 
-   Make sure you have the [Nimbella CLI `nim`](https://nimbella.io/downloads/nim/nim.html) installed. You can do that from the CLI web page or by visiting [`nimbella.com/login`](https://nimbella.com/login) to login.
+```toml
+[[plugins]]
+package = "netlify-plugin-nimbella"
+```
 
-   Generate a token using the CLI by running the following command:
-   ```bash
-   nim auth export --non-expiring
-   ```
-
-   Next, visit [`https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment`](https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment) to create an environment variable named `NIMBELLA_LOGIN_TOKEN` with your the token you just obtained.
-
-2. **Add Nimbella Build Plugin to Your Netlify Site**
-
-   Append the below to your `netlify.toml`.
-
-   ```toml
-   [[plugins]]
-   package = "netlify-plugin-nimbella"
-   ```
-
-## Inputs
-
-This section describes the possible inputs that the plugin can accept.
+You may provide additional configuration in the `netlify.toml` file to configure the resources available to your serverless functions, or to configure the API path for your functions. Here is an example.
 
 ```toml
 [nimbella]
@@ -85,15 +70,15 @@ path = "/.netlify/functions/" # The prefix path to access your deployed packages
 
 ## Usage
 
-Learn how to structure your repository and `netlify.toml` for this plugin to deploy your functions on Nimbella Cloud.
+In this section, you will learn how to structure your repository and `netlify.toml` for this plugin to deploy your functions on Nimbella Cloud.
 
 #### Use Nimbella Projects with Netlify Sites
 
-> Learn about Nimbella projects [here](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment)
+The Nimbella add-on for Netlify allows you to use [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) to automate packaging and deployment. We suggest reading the documentation about [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) at some point. We provide a quick introduction here.
 
-All we need is a directory named `packages` at the base of your repository. The plugin will automatically deploy the packages inside `packages` and will also create redirect rules so all requests to `/.netlify/functions/*` will be redirected to functions (actions) deployed on Nimbella.
+Nimbella projects inspect a directory named `packages` at the base of your repository. The contents of this directory dictate the serverless functions that are deployed. The plugin will automatically deploy the functions inside `packages` and will also create redirect rules so all requests to `/.netlify/functions/*` are redirected to functions (also called actions) deployed on Nimbella.
 
-For example, let's imagine the following structure:
+For example, for the following project structure:
 
 ```
 site
@@ -111,9 +96,9 @@ site
     └── index.html
 ```
 
-To invoke the function `login`, we would make a request to `https://your-site.com/.netlify/functions/auth/login` (i.e. we need to prefix the package name `auth` to invoke the function `login`.)
+You will invoke the function `auth/login.js` via the API end point `https://your-site.com/.netlify/functions/auth/login`.
 
-If you're using Netlify Functions, you need to change the base prefix `/.netlify/functions/` to something different (e.g. `/api/`) in `netlify.toml` so Netlify Functions can be accessed using `/.netlify/functions/` route and Nimbella Functions can be accessed using `/api/` route.
+If you're using Netlify Functions, you need to change the base prefix `/.netlify/functions/` to something different (e.g. `/api/`) in `netlify.toml` so Netlify Functions can be accessed using `/.netlify/functions/` and Nimbella Functions can be accessed using `/api/` route.
 
 ```toml
 [nimbella]
@@ -143,15 +128,15 @@ All enviroment variables present in the build runtime during Netlify build (exce
 
 These are few sites that use `netlify-plugin-nimbella` to deploy frontend content to Netlify and functions on Nimbella.
 
-- [`netlify-plugin-nimbella.netlify.app`](https://github.com/nimbella/netlify-plugin-nimbella.netlify.app)
-- [`netlify-nimbella-faunadb.netlify.app`](https://github.com/nimbella/netlify-faunadb-example)
-- [`netlify-nimbella-ocr.netlify.app`](https://github.com/nimbella/netlify-nimbella-ocr)
+- [A "hello world" example](https://github.com/nimbella/netlify-plugin-nimbella.netlify.app)
+- [Combining Netlify with Nimbella and Fauna](https://github.com/nimbella/netlify-faunadb-example)
+- [Optical character recognition using Nimbella key-value and object stores](https://github.com/nimbella/netlify-nimbella-ocr)
 
 Look at `netlify.toml` of these repositories to get an idea on how the plugin is used.
 
 ## Support
 
-We're always happy to help you with any issues you encounter. You may want to [join our Slack community](https://nimbella-community.slack.com) to engage with us for a more rapid response.
+We're always happy to help you with any issues you encounter. You may want to [join our Slack community](https://nimbella-community.slack.com) to engage with us for a more rapid response. Otherwise, open an issue and provide us with details about your situation so we can respond adequately.
 
 ## License
 
