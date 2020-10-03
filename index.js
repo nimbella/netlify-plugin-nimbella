@@ -9,7 +9,7 @@ let config = {};
 let isProject = false;
 let isActions = false;
 const functionsBuildDir = `functions-build-${Date.now()}`;
-const nim = `npx -p https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz nim`;
+const NIM_CLI = 'https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz';
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1';
@@ -19,7 +19,7 @@ process.env.NIM_DISABLE_AUTOUPDATE = '1';
  * @param {*} run - function provided under utils by Netlify to build event functions.
  */
 async function deployProject(run) {
-  await run.command(`${nim} project deploy . --exclude=web`);
+  await run.command(`nim project deploy . --exclude=web`);
 }
 
 /**
@@ -38,7 +38,7 @@ async function deployActions({
   for (const file of files) {
     const [actionName, extension] = file.split('.');
     let command =
-      `${nim} action update ${actionName} ${join(functionsDir, file)} ` +
+      `nim action update ${actionName} ${join(functionsDir, file)} ` +
       `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
       `--web=raw --env-file=${secretsPath} `;
 
@@ -71,16 +71,20 @@ module.exports = {
         );
       }
 
+      console.log('Installing nimbella cli...');
+      await utils.run.command(`npm i -g ${NIM_CLI}`);
+
       const nimConfig = join(process.env.HOME, '.nimbella');
       await utils.cache.restore(nimConfig);
 
       const loggedIn = existsSync(nimConfig);
       // Login if not logged in before.
       if (loggedIn) {
-        console.log('Using cached auth credentials.');
+        console.log('\nUsing the following namespace.');
+        await utils.run.command('nim auth current');
       } else {
         await utils.run.command(
-          `${nim} auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
+          `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
         );
 
         // Cache the nimbella config to avoid logging in for consecutive builds.
