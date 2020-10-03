@@ -1,6 +1,6 @@
 {
   "name": "netlify-plugin-nimbella",
-  "version": "1.3.0",
+  "version": "1.4.1",
   "main": "index.js",
   "description": "A Netlify Build Plugin that extends Netlify Sites to support serverless functions using Nimbella Cloud.",
   "scripts": {
