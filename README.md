@@ -12,7 +12,7 @@ Learn more about Nimbella's integration for Netlify from [here](https://nimbella
 
 - [Add-On Setup](##add-on-setup)
   - [New to Nimbella](#New-to-Nimbella)
-  - [Existing Nimbella User](#Existing-Nimbella-User)
+  - [Existing Nimbella User](#existing-nimbella-developer)
   - [Minimal Netlify TOML Configuration](#Minimal-Netlify-TOML-Configuration)
 - [Usage](#usage)
   - [Use Nimbella Projects with Netlify Sites](#Use-Nimbella-Projects-with-Netlify-Sites)
