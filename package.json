@@ -2,7 +2,7 @@
   "name": "netlify-plugin-nimbella",
   "version": "1.5.0",
   "main": "index.js",
-  "description": "A Netlify Build Plugin that extends Netlify Sites to support serverless functions using Nimbella Cloud.",
+  "description": "Nimbella add-on for Netlify to extends Netlify Sites with serverless functions and stateful APIs using Nimbella Cloud.",
   "scripts": {
     "setup": "yarn install",
     "test": "xo"
@@ -19,8 +19,8 @@
     "serverless",
     "jamstack"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Nimbella Corporation",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/nimbella/netlify-plugin-nimbella/issues"
   },
