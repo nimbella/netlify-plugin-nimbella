@@ -80,7 +80,7 @@ path = "/api/" # The prefix path to access your deployed packages.
 
 In this section, you will learn how to structure your repository and `netlify.toml` for this plugin to deploy your functions on Nimbella Cloud.
 
-**Note:** Deployment of packages/functions to Nimbella is skipped when the build context is not production. We're working on an enhancement that will allow you to deploy preview builds to staging namespace on Nimbella.
+**Note:** Deployment of packages/functions to Nimbella is skipped when the build context is not "production". We're working on an enhancement that will allow you to deploy preview builds to staging namespaces on Nimbella.
 
 #### Use Nimbella Projects with Netlify Sites
 
@@ -125,7 +125,8 @@ This plugin builds your functions using a modified version of [netlify-lambda](h
 
 **Notes:**
 - None of environment variables present in the Netlify build runtime are made available to the deployed functions on Nimbella Cloud. _An enhancement to permit selective forwarding of environment variables is coming soon._
-- When using `packages` along with functions, make sure to append "default" to `/api/` to invoke the functions as all functions are deployed under `default` package of your namespace.
+- Replace occurrences of `/.netlify/functions` in your API calls with `/.netlify/nimbella`, or use `/api`, as your API path instead.
+- All Netlify functions are deployed to a "default" package in your Nimbella namespace. The package name is required in the API path. For Netlify functions, the path will be `/.netlify/nimbella/default/` or `/api/default`. For named packages, replace `default` with your package name instead.
 
 ## Examples
 
