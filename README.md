@@ -122,7 +122,7 @@ This plugin builds your functions using a modified version of [netlify-lambda](h
 
 All enviroment variables present in the build runtime during Netlify build (except `CI` and `NETLIFY`) are made availabe to the deployed functions on Nimbella Cloud.
 
-**Note:** When you're using `packages` along with functions, make sure to apend "default" to `.netlify/funcitons` to invoke the functions as all functions are deployed under `default` package of your namespace.
+**Note:** When you're using `packages` along with functions, make sure to apend "default" to `.netlify/functions` to invoke the functions as all functions are deployed under `default` package of your namespace.
 
 ## Examples
 
