@@ -124,18 +124,23 @@ module.exports = {
     try {
       const {stdout: namespace} = await utils.run.command(`nim auth current`);
 
-      if (isProject) {
-        await deployProject(utils.run);
-      }
+      if (process.env.CONTEXT === 'production') {
+        if (isProject) {
+          await deployProject(utils.run);
+        }
 
-      if (isActions) {
-        await deployActions({
-          run: utils.run,
-          functionsDir: functionsBuildDir,
-          secretsPath: join(process.cwd(), 'env.json'),
-          timeout: options.timeout, // Default is 6 seconds
-          memory: options.memory // Default is 256MB (max for free tier)
-        });
+        if (isActions) {
+          await deployActions({
+            run: utils.run,
+            functionsDir: functionsBuildDir,
+            timeout: options.timeout, // Default is 6 seconds
+            memory: options.memory // Default is 256MB (max for free tier)
+          });
+        }
+      } else {
+        console.log(
+          `Skipping the deployment to Nimbella as the context (${process.env.CONTEXT}) is not production.`
+        );
       }
 
       const redirectRules = [];
