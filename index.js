@@ -27,20 +27,14 @@ async function deployProject(run) {
  * @param {function} run - function provided under utils by Netlify to build event functions.
  * @param {string} functionsDir - Path to the actions directory.
  */
-async function deployActions({
-  run,
-  functionsDir,
-  secretsPath,
-  timeout,
-  memory
-}) {
+async function deployActions({run, functionsDir, timeout, memory}) {
   const files = await readdir(functionsDir);
   for (const file of files) {
     const [actionName, extension] = file.split('.');
     let command =
       `nim action update ${actionName} ${join(functionsDir, file)} ` +
       `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
-      `--web=raw --env-file=${secretsPath} `;
+      `--web=raw `;
 
     if (extension === 'js') {
       command += '--kind nodejs-lambda:10 --main handler';
@@ -117,13 +111,6 @@ module.exports = {
     try {
       const {stdout: namespace} = await utils.run.command(`nim auth current`);
 
-      // Create env.json
-      const envs = {...process.env};
-      // Remove CI related variables.
-      delete envs.NETLIFY;
-      delete envs.CI;
-      await writeFile('env.json', JSON.stringify(envs));
-
       if (isProject) {
         await deployProject(utils.run);
       }
@@ -132,7 +119,6 @@ module.exports = {
         await deployActions({
           run: utils.run,
           functionsDir: functionsBuildDir,
-          secretsPath: join(process.cwd(), 'env.json'),
           timeout: config.nimbella.timeout || 6000, // Default is 10 seconds
           memory: config.nimbella.memory || 256 // Default is 256MB (max for free tier)
         });
