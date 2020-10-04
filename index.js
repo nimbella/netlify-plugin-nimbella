@@ -147,29 +147,31 @@ module.exports = {
       const redirects = [];
       const redirectsFile = join(constants.PUBLISH_DIR, '_redirects');
 
-      if (existsSync(redirectsFile)) {
-        console.log(
-          "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-        );
-        const {parseRedirectsFormat} = require('netlify-redirect-parser');
-        const {success} = await parseRedirectsFormat(redirectsFile);
-        redirects.push(...success);
-      }
+      if (isActions) {
+        if (existsSync(redirectsFile)) {
+          console.log(
+            "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+          );
+          const {parseRedirectsFormat} = require('netlify-redirect-parser');
+          const {success} = await parseRedirectsFormat(redirectsFile);
+          redirects.push(...success);
+        }
 
-      if (netlifyToml.redirects) {
-        console.log(
-          "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-        );
-        redirects.push(...netlifyToml.redirects);
-      }
+        if (netlifyToml.redirects) {
+          console.log(
+            "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+          );
+          redirects.push(...netlifyToml.redirects);
+        }
 
-      for (const redirect of redirects) {
-        if (redirect.status === 200) {
-          if (redirect.to.startsWith('/.netlify/functions/')) {
-            const redirectPath = redirect.to.split('/.netlify/functions/')[1];
-            redirectRules.push(
-              `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
-            );
+        for (const redirect of redirects) {
+          if (redirect.status === 200) {
+            if (redirect.to.startsWith('/.netlify/functions/')) {
+              const redirectPath = redirect.to.split('/.netlify/functions/')[1];
+              redirectRules.push(
+                `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
+              );
+            }
           }
         }
       }
