@@ -5,11 +5,17 @@ const toml = require('@iarna/toml');
 const cpx = require('cpx');
 const build = require('netlify-lambda/lib/build');
 
-let config = {};
+const NIM_CLI = 'https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz';
+const functionsBuildDir = `functions-build-${Date.now()}`;
+let netlifyToml = {};
 let isProject = false;
 let isActions = false;
-const functionsBuildDir = `functions-build-${Date.now()}`;
-const NIM_CLI = 'https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz';
+let options = {
+  functions: '',
+  timeout: 6000,
+  memory: 256,
+  path: '/api/'
+};
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1';
@@ -85,9 +91,16 @@ module.exports = {
         await utils.cache.save(nimConfig);
       }
 
-      config = toml.parse(await readFile(constants.CONFIG_PATH));
+      if (constants.CONFIG_PATH && existsSync(constants.CONFIG_PATH)) {
+        netlifyToml = toml.parse(await readFile(constants.CONFIG_PATH));
+
+        if (netlifyToml.nimbella) {
+          options = {...options, ...netlifyToml.nimbella};
+        }
+      }
+
+      isActions = options.functions ? existsSync(options.functions) : false;
       isProject = existsSync('packages');
-      isActions = existsSync(config.nimbella.functions);
     } catch (error) {
       utils.build.failBuild(error.message);
     }
@@ -96,11 +109,11 @@ module.exports = {
   onBuild: async ({utils}) => {
     try {
       if (isActions) {
-        // Here we're passing the build directory instead of source because source is extracted from config.nimbella.functions.
+        // Here we're passing the build directory instead of source because source is extracted from options.functions.
         const stats = await build.run(functionsBuildDir);
         console.log(stats.toString(stats.compilation.options.stats));
         // Copy any files that do not end with .js. T
-        cpx.copy(config.nimbella.functions + '/**/*.!(js)', functionsBuildDir);
+        cpx.copy(options.functions + '/**/*.!(js)', functionsBuildDir);
       }
     } catch (error) {
       utils.build.failBuild(error.message);
@@ -119,8 +132,9 @@ module.exports = {
         await deployActions({
           run: utils.run,
           functionsDir: functionsBuildDir,
-          timeout: config.nimbella.timeout || 6000, // Default is 10 seconds
-          memory: config.nimbella.memory || 256 // Default is 256MB (max for free tier)
+          secretsPath: join(process.cwd(), 'env.json'),
+          timeout: options.timeout, // Default is 6 seconds
+          memory: options.memory // Default is 256MB (max for free tier)
         });
       }
 
@@ -137,11 +151,11 @@ module.exports = {
         redirects.push(...success);
       }
 
-      if (config.redirects) {
+      if (netlifyToml.redirects) {
         console.log(
           "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
         );
-        redirects.push(...config.redirects);
+        redirects.push(...netlifyToml.redirects);
       }
 
       for (const redirect of redirects) {
@@ -155,7 +169,7 @@ module.exports = {
         }
       }
 
-      let {path: redirectPath = '.netlify/functions'} = config.nimbella;
+      let {path: redirectPath} = options;
       redirectPath = redirectPath.endsWith('/')
         ? redirectPath
         : redirectPath + '/';

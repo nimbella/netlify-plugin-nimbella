@@ -65,7 +65,7 @@ You may provide additional configuration in the `netlify.toml` file to configure
 functions = "functions" # Functions source directory. Use this if you would like to use Nimbella to deploy your functions.
 timeout = 6000 # Function timeout limit in milliseconds.
 memory = 256 # Function memory limit in MB.
-path = "/.netlify/functions/" # The prefix path to access your deployed packages. Change this if you're using both Netlify Functions and Nimbella for your backend.
+path = "/api/" # The prefix path to access your deployed packages.
 ```
 
 ## Usage
@@ -76,7 +76,7 @@ In this section, you will learn how to structure your repository and `netlify.to
 
 The Nimbella add-on for Netlify allows you to use [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) to automate packaging and deployment. We suggest reading the documentation about [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) at some point. We provide a quick introduction here.
 
-Nimbella projects inspect a directory named `packages` at the base of your repository. The contents of this directory dictate the serverless functions that are deployed. The plugin will automatically deploy the functions inside `packages` and will also create redirect rules so all requests to `/.netlify/functions/*` are redirected to functions (also called actions) deployed on Nimbella.
+Nimbella projects inspect a directory named `packages` at the base of your repository. The contents of this directory dictate the serverless functions that are deployed. The plugin will automatically deploy the functions inside `packages` and all of the functions (also called actions) can accessed using the following pattern: `https://your-site.com/<path(default="api")>/<packageName>/<actionName>`.
 
 For example, for the following project structure:
 
@@ -96,14 +96,7 @@ site
     └── index.html
 ```
 
-You will invoke the function `auth/login.js` via the API end point `https://your-site.com/.netlify/functions/auth/login`.
-
-If you're using Netlify Functions, you need to change the base prefix `/.netlify/functions/` to something different (e.g. `/api/`) in `netlify.toml` so Netlify Functions can be accessed using `/.netlify/functions/` and Nimbella Functions can be accessed using `/api/` route.
-
-```toml
-[nimbella]
-path = '/api/' # default /.netlify/functions/.
-```
+You will invoke the function `auth/login.js` via the API end point `https://your-site.com/api/auth/login`.
 
 #### Deploy Netlify Functions on Nimbella Cloud
 
@@ -122,7 +115,7 @@ This plugin builds your functions using a modified version of [netlify-lambda](h
 
 All enviroment variables present in the build runtime during Netlify build (except `CI` and `NETLIFY`) are made availabe to the deployed functions on Nimbella Cloud.
 
-**Note:** When you're using `packages` along with functions, make sure to apend "default" to `.netlify/functions` to invoke the functions as all functions are deployed under `default` package of your namespace.
+**Note:** When you're using `packages` along with functions, make sure to apend "default" to `/api/` to invoke the functions as all functions are deployed under `default` package of your namespace.
 
 ## Examples
 
