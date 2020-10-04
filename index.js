@@ -14,7 +14,7 @@ let options = {
   functions: '',
   timeout: 6000,
   memory: 256,
-  path: '/.netlify/functions/'
+  path: '/api/'
 };
 
 // Disable auto updates of nim.
@@ -91,7 +91,7 @@ module.exports = {
         await utils.cache.save(nimConfig);
       }
 
-      if (existsSync(constants.CONFIG_PATH)) {
+      if (constants.CONFIG_PATH && existsSync(constants.CONFIG_PATH)) {
         netlifyToml = toml.parse(await readFile(constants.CONFIG_PATH));
 
         if (netlifyToml.nimbella) {
