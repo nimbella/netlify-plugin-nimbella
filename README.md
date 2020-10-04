@@ -47,7 +47,7 @@ You can use the Nimbella add-on for Netlify with your existing Nimbella account.
 nim auth export --non-expiring
 ```
 
-2. Next, visit [`https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment`](https://app.netlify.com/sites/<your-site-name>/settings/deploys#environment) to create an environment variable named `NIMBELLA_LOGIN_TOKEN` and provide the the token you just obtained as its value.
+2. Next, run the following command `netlify env:set NIMBELLA_LOGIN_TOKEN <token>` to create an environment variable named NIMBELLA_LOGIN_TOKEN and provide the the token you just obtained as its value
 
 ### Minimal Netlify TOML Configuration
 
