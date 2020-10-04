@@ -72,6 +72,8 @@ path = "/api/" # The prefix path to access your deployed packages.
 
 In this section, you will learn how to structure your repository and `netlify.toml` for this plugin to deploy your functions on Nimbella Cloud.
 
+**Note:** Deployment of packages/functions to Nimbella is skipped when the build context is not production. We're working on an enhancement that will allow you to deploy preview builds to staging namespace on Nimbella.
+
 #### Use Nimbella Projects with Netlify Sites
 
 The Nimbella add-on for Netlify allows you to use [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) to automate packaging and deployment. We suggest reading the documentation about [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) at some point. We provide a quick introduction here.
