@@ -124,7 +124,7 @@ Move the `functions` property under `build` to `nimbella` inside `netlify.toml`.
 This plugin builds your functions using a modified version of [netlify-lambda](https://github.com/netlify/netlify-lambda). You can get rid of any build steps you're performing on functions since the plugin handles it for you.
 
 **Notes:**
-- None of environment variables present in the build runtime during Netlify build are made available to the deployed functions on Nimbella Cloud.
+- None of environment variables present in the Netlify build runtime are made available to the deployed functions on Nimbella Cloud. _An enhancement to permit selective forwarding of environment variables is coming soon._
 - When using `packages` along with functions, make sure to append "default" to `/api/` to invoke the functions as all functions are deployed under `default` package of your namespace.
 
 ## Examples
