@@ -6,9 +6,16 @@
 [![Join Slack](https://img.shields.io/badge/join-slack-9B69A0.svg)](https://nimbella-community.slack.com/)
 [![Twitter](https://img.shields.io/twitter/follow/nimbella.svg?style=social&logo=twitter)](https://twitter.com/intent/follow?screen_name=nimbella)
 
-A Netlify Build Plugin that extends Netlify Sites with support for portable and stateful serverless functions using [Nimbella](https://nimbella.com/product/platform). The add-on enables Netlify developers to deploy serverless functions and stateful APIs to the Nimbella cloud 1) with more programming language choices, 2) easier packaging, 3) customizable runtimes and durations, and 4) cloud portability.
+The Nimbella add-on for Netlify is a Netlify Build Plugin that extends Netlify Sites with portable and stateful serverless functions using [Nimbella](https://nimbella.com/product/platform). The add-on enables developers to deploy sites to Netlify's CDN, and serverless functions and stateful APIs to the [Nimbella Cloud](https://nimbella.com).
 
-Learn more about Nimbella's integration for Netlify from [here](https://nimbella.com/integrations/netlify).
+The Nimbella add-on provides the following benefits.
+1. **More runtimes:** implement functions in numerous languages including Python, Rust, Swift, Ruby, PHP, Java, Go, Node, and Deno.
+2. **Resource customization:** run functions for longer durations, and with more memory.
+3. **Support for key-value and object stores:** build stateful APIs, and handle images or files.
+4. **Easier packaging:** skip the hassles of web packing and working with dependencies.
+5. **Cloud portability**: repeatable deployments that work across clouds.
+
+Learn more about the Nimbella add-on for Netlify [on our website](https://nimbella.com/integrations/netlify).
 
 - [Add-On Setup](#add-on-setup)
   - [New to Nimbella](#new-to-nimbella)
@@ -33,9 +40,10 @@ To do that, run the following command from the base of your local project direct
 netlify addons:create nimbella
 ```
 
-The addon will create a Nimbella namespace where your resources are allocated. Your Nimbella namespace includes your serverless functions, a dedicated key-value store, and access to an integrated object store.
+The add-on will create a Nimbella namespace where your resources are allocated. Your Nimbella namespace includes your serverless functions, a dedicated key-value store, and access to an integrated object store.
 
-You may claim the namespace and login to your Nimbella account by running `netlify addons:auth nimbella`.
+<!--TODO: add steps to claim the namespace and configure `nim` CLI when the flow is enabled. -->
+<!--You may claim the namespace and login to your Nimbella account by running `netlify addons:auth nimbella`.-->
 
 ### Existing Nimbella Developer
 
@@ -115,9 +123,9 @@ Move the `functions` property under `build` to `nimbella` inside `netlify.toml`.
 
 This plugin builds your functions using a modified version of [netlify-lambda](https://github.com/netlify/netlify-lambda). You can get rid of any build steps you're performing on functions since the plugin handles it for you.
 
-All enviroment variables present in the build runtime during Netlify build (except `CI` and `NETLIFY`) are made availabe to the deployed functions on Nimbella Cloud.
-
-**Note:** When you're using `packages` along with functions, make sure to apend "default" to `/api/` to invoke the functions as all functions are deployed under `default` package of your namespace.
+**Notes:**
+- None of environment variables present in the build runtime during Netlify build are made available to the deployed functions on Nimbella Cloud.
+- When using `packages` along with functions, make sure to append "default" to `/api/` to invoke the functions as all functions are deployed under `default` package of your namespace.
 
 ## Examples
 
