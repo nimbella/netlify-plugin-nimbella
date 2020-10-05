@@ -29,7 +29,8 @@
     "@iarna/toml": "^2.2.5",
     "cpx": "^1.5.0",
     "netlify-lambda": "satyarohith/netlify-lambda#master",
-    "netlify-redirect-parser": "^2.5.0"
+    "netlify-redirect-parser": "^2.5.0",
+    "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nim-v1.8.0/nim-v1.8.0.tar.gz"
   },
   "xo": {
     "space": true,
