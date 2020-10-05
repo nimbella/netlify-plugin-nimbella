@@ -49,7 +49,7 @@ The add-on will create a Nimbella namespace where your resources are allocated. 
 
 You can use the Nimbella add-on for Netlify with your existing Nimbella account. This is accomplished by creating a Netlify Build environment variable so the plugin can deploy the resources to the Nimbella namespace of your choosing.
 
-1. You will need to you the [Nimbella CLI `nim`](https://nimbella.io/downloads/nim/nim.html) or the [Nimbella Workbench](https://nimbella.io/wb) to export a login token to run the command shown below. If you want to sign up for a free Nimbella account or to login, visit [`nimbella.com/login`](https://nimbella.com/login)) to get started.
+1. You will need to you the [Nimbella CLI `nim`](https://nimbella.io/downloads/nim/nim.html) or the [Nimbella Workbench](https://nimbella.io/wb) to export a login token to run the command shown below. If you want to sign up for a free Nimbella account or to login, visit [`nimbella.com/login`](https://nimbella.com/login) to get started.
 
 ```sh
 nim auth export --non-expiring
