@@ -1,1 +1,13 @@
 name: netlify-plugin-nimbella
+inputs:
+  - name: functions
+    description: The source directory of the functions.
+  - name: timeout
+    description: Timeout LIMIT in milliseconds after which the function is terminated (functions input value is required to utilize this option).
+    default: 6000
+  - name: memory
+    description: Maximum memory LIMIT in MB for the function (functions input value is required to utilize this option).
+    default: 256
+  - name: path
+    description: The API prefix path you would like to use to access your functions.
+    default: '/api/'

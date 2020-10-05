@@ -9,12 +9,6 @@ const functionsBuildDir = `functions-build-${Date.now()}`;
 let netlifyToml = {};
 let isProject = false;
 let isActions = false;
-let options = {
-  functions: '',
-  timeout: 6000,
-  memory: 256,
-  path: '/api/'
-};
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1';
@@ -62,7 +56,7 @@ async function deployActions({run, functionsDir, timeout, memory}) {
 
 module.exports = {
   // Execute before build starts.
-  onPreBuild: async ({utils, constants}) => {
+  onPreBuild: async ({utils, constants, inputs}) => {
     try {
       if (!process.env.NIMBELLA_LOGIN_TOKEN) {
         utils.build.failBuild(
@@ -89,34 +83,30 @@ module.exports = {
 
       if (constants.CONFIG_PATH && existsSync(constants.CONFIG_PATH)) {
         netlifyToml = toml.parse(await readFile(constants.CONFIG_PATH));
-
-        if (netlifyToml.nimbella) {
-          options = {...options, ...netlifyToml.nimbella};
-        }
       }
 
-      isActions = options.functions ? existsSync(options.functions) : false;
+      isActions = inputs.functions ? existsSync(inputs.functions) : false;
       isProject = existsSync('packages');
     } catch (error) {
       utils.build.failBuild(error.message);
     }
   },
   // Build the functions
-  onBuild: async ({utils}) => {
+  onBuild: async ({utils, inputs}) => {
     try {
       if (isActions) {
-        // Here we're passing the build directory instead of source because source is extracted from options.functions.
+        // Here we're passing the build directory instead of source because source is extracted from inputs.functions.
         const stats = await build.run(functionsBuildDir);
         console.log(stats.toString(stats.compilation.options.stats));
         // Copy any files that do not end with .js. T
-        cpx.copy(options.functions + '/**/*.!(js)', functionsBuildDir);
+        cpx.copy(inputs.functions + '/**/*.!(js)', functionsBuildDir);
       }
     } catch (error) {
       utils.build.failBuild(error.message);
     }
   },
   // Execute after build is done.
-  onPostBuild: async ({constants, utils}) => {
+  onPostBuild: async ({constants, utils, inputs}) => {
     try {
       const {stdout: namespace} = await utils.run.command(
         `npx nim auth current`
@@ -131,8 +121,8 @@ module.exports = {
           await deployActions({
             run: utils.run,
             functionsDir: functionsBuildDir,
-            timeout: options.timeout, // Default is 6 seconds
-            memory: options.memory // Default is 256MB (max for free tier)
+            timeout: inputs.timeout, // Default is 6 seconds
+            memory: inputs.memory // Default is 256MB (max for free tier)
           });
         }
       } else {
@@ -175,7 +165,7 @@ module.exports = {
         }
       }
 
-      let {path: redirectPath} = options;
+      let {path: redirectPath} = inputs;
       redirectPath = redirectPath.endsWith('/')
         ? redirectPath
         : redirectPath + '/';
