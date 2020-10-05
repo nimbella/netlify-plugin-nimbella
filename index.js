@@ -74,7 +74,7 @@ module.exports = {
       console.log('Installing nimbella cli...');
       await utils.run.command(`npm i -g ${NIM_CLI}`);
 
-      const nimConfig = join(process.env.HOME, '.nimbella');
+      const nimConfig = join(require('os').homedir(), '.nimbella');
       await utils.cache.restore(nimConfig);
 
       const loggedIn = existsSync(nimConfig);
