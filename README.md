@@ -69,11 +69,13 @@ package = "netlify-plugin-nimbella"
 You may provide additional configuration in the `netlify.toml` file to configure the resources available to your serverless functions, or to configure the API path for your functions. Here is an example.
 
 ```toml
-[nimbella]
+[[plugins]]
+package = "netlify-plugin-nimbella"
+[plugins.inputs]
 functions = "functions" # Functions source directory. Use this if you would like to use Nimbella to deploy your functions.
-timeout = 6000 # Function timeout limit in milliseconds.
 memory = 256 # Function memory limit in MB.
 path = "/api/" # The prefix path to access your deployed packages.
+timeout = 6000 # Function timeout limit in milliseconds.
 ```
 
 ## Usage
@@ -112,13 +114,13 @@ You will invoke the function `auth/login.js` via the API end point `https://your
 
 You can deploy your existing Netlify Functions to Nimbella Cloud with very minimal changes.
 
-Move the `functions` property under `build` to `nimbella` inside `netlify.toml`.
+Specify the `functions` input value under `[plugins.inputs]` inside `netlify.toml`.
 
 ```diff
-[build]
--functions = './functions'
-+[nimbella]
-+functions = './functions' # Source directory
+[[plugins]]
+package = "netlify-plugin-nimbella"
++ [plugins.inputs]
++ functions = "functions" # Functions source directory. Use this if you would like to use Nimbella to deploy your functions.
 ```
 
 This plugin builds your functions using a modified version of [netlify-lambda](https://github.com/netlify/netlify-lambda). You can get rid of any build steps you're performing on functions since the plugin handles it for you.
