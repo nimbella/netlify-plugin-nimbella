@@ -1,11 +1,10 @@
 const {existsSync} = require('fs');
-const {appendFile, readFile, readdir, writeFile} = require('fs').promises;
+const {appendFile, readFile, readdir} = require('fs').promises;
 const {join} = require('path');
 const toml = require('@iarna/toml');
 const cpx = require('cpx');
 const build = require('netlify-lambda/lib/build');
 
-const NIM_CLI = 'https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz';
 const functionsBuildDir = `functions-build-${Date.now()}`;
 let netlifyToml = {};
 let isProject = false;
@@ -25,7 +24,7 @@ process.env.NIM_DISABLE_AUTOUPDATE = '1';
  * @param {*} run - function provided under utils by Netlify to build event functions.
  */
 async function deployProject(run) {
-  await run.command(`nim project deploy . --exclude=web`);
+  await run.command(`npx nim project deploy . --exclude=web`);
 }
 
 /**
@@ -38,7 +37,7 @@ async function deployActions({run, functionsDir, timeout, memory}) {
   for (const file of files) {
     const [actionName, extension] = file.split('.');
     let command =
-      `nim action update ${actionName} ${join(functionsDir, file)} ` +
+      `npx nim action update ${actionName} ${join(functionsDir, file)} ` +
       `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
       `--web=raw `;
 
@@ -71,9 +70,6 @@ module.exports = {
         );
       }
 
-      console.log('Installing nimbella cli...');
-      await utils.run.command(`npm i -g ${NIM_CLI}`);
-
       const nimConfig = join(require('os').homedir(), '.nimbella');
       await utils.cache.restore(nimConfig);
 
@@ -81,10 +77,10 @@ module.exports = {
       // Login if not logged in before.
       if (loggedIn) {
         console.log('\nUsing the following namespace.');
-        await utils.run.command('nim auth current');
+        await utils.run.command('npx nim auth current');
       } else {
         await utils.run.command(
-          `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
+          `npx nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
         );
 
         // Cache the nimbella config to avoid logging in for consecutive builds.
@@ -122,7 +118,9 @@ module.exports = {
   // Execute after build is done.
   onPostBuild: async ({constants, utils}) => {
     try {
-      const {stdout: namespace} = await utils.run.command(`nim auth current`);
+      const {stdout: namespace} = await utils.run.command(
+        `npx nim auth current`
+      );
 
       if (process.env.CONTEXT === 'production') {
         if (isProject) {
@@ -165,13 +163,14 @@ module.exports = {
         }
 
         for (const redirect of redirects) {
-          if (redirect.status === 200) {
-            if (redirect.to.startsWith('/.netlify/functions/')) {
-              const redirectPath = redirect.to.split('/.netlify/functions/')[1];
-              redirectRules.push(
-                `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
-              );
-            }
+          if (
+            redirect.status === 200 &&
+            redirect.to.startsWith('/.netlify/functions/')
+          ) {
+            const redirectPath = redirect.to.split('/.netlify/functions/')[1];
+            redirectRules.push(
+              `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
+            );
           }
         }
       }
