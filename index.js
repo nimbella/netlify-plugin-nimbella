@@ -41,6 +41,7 @@ async function deployActions({run, functionsDir, timeout, memory}) {
 
     // Deploy
     console.log(`Deploying ${file}...`);
+    // eslint-disable-next-line no-await-in-loop
     const {stdout, stderr, exitCode} = await run.command(command, {
       reject: false,
       stdout: 'ignore'
