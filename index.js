@@ -18,7 +18,7 @@ process.env.NIM_DISABLE_AUTOUPDATE = '1';
  * @param {*} run - function provided under utils by Netlify to build event functions.
  */
 async function deployProject(run) {
-  await run.command(`npx nim project deploy . --exclude=web`);
+  await run.command(`nim project deploy . --exclude=web`);
 }
 
 /**
@@ -31,7 +31,7 @@ async function deployActions({run, functionsDir, timeout, memory}) {
   for (const file of files) {
     const [actionName, extension] = file.split('.');
     let command =
-      `npx nim action update ${actionName} ${join(functionsDir, file)} ` +
+      `nim action update ${actionName} ${join(functionsDir, file)} ` +
       `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
       `--web=raw `;
 
@@ -71,10 +71,10 @@ module.exports = {
       // Login if not logged in before.
       if (loggedIn) {
         console.log('\nUsing the following namespace.');
-        await utils.run.command('npx nim auth current');
+        await utils.run.command('nim auth current');
       } else {
         await utils.run.command(
-          `npx nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
+          `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
         );
 
         // Cache the nimbella config to avoid logging in for consecutive builds.
@@ -108,9 +108,7 @@ module.exports = {
   // Execute after build is done.
   onPostBuild: async ({constants, utils, inputs}) => {
     try {
-      const {stdout: namespace} = await utils.run.command(
-        `npx nim auth current`
-      );
+      const {stdout: namespace} = await utils.run.command(`nim auth current`);
 
       if (process.env.CONTEXT === 'production') {
         if (isProject) {
