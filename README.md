@@ -135,7 +135,6 @@ This plugin builds your functions using a modified version of [netlify-lambda](h
 These are few sites that use `netlify-plugin-nimbella` to deploy frontend content to Netlify and functions on Nimbella.
 
 - [A "hello world" example](https://github.com/nimbella/netlify-plugin-nimbella.netlify.app)
-- [Combining Netlify with Nimbella and Fauna](https://github.com/nimbella/netlify-faunadb-example)
 - [Optical character recognition using Nimbella key-value and object stores](https://github.com/nimbella/netlify-nimbella-ocr)
 
 Look at `netlify.toml` of these repositories to get an idea on how the plugin is used.
