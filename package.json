@@ -44,6 +44,10 @@
       "pre-commit": "yarn test"
     }
   },
+  "files": [
+    "manifest.yml",
+    "index.js"
+  ],
   "devDependencies": {
     "husky": "^4.3.0",
     "xo": "^0.33.0"
