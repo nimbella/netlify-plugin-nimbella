@@ -97,7 +97,7 @@ module.exports = {
     try {
       if (isActions) {
         // Here we're passing the build directory instead of source because source is extracted from inputs.functions.
-        const stats = await build.run(functionsBuildDir);
+        const stats = await build.run(functionsBuildDir, inputs.functions);
         console.log(stats.toString(stats.compilation.options.stats));
         // Copy any files that do not end with .js. T
         cpx.copy(inputs.functions + '/**/*.!(js)', functionsBuildDir);
@@ -117,6 +117,7 @@ module.exports = {
         }
 
         if (isActions) {
+          console.log('\n------------------Functions------------------\n');
           await deployActions({
             run: utils.run,
             functionsDir: functionsBuildDir,
