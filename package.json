@@ -1,7 +1,7 @@
 {
   "name": "netlify-plugin-nimbella",
   "version": "1.7.0",
-  "main": "index.js",
+  "main": "src/index.js",
   "description": "Nimbella add-on for Netlify to extends Netlify Sites with serverless functions and stateful APIs using Nimbella Cloud.",
   "scripts": {
     "setup": "yarn install",
@@ -46,7 +46,7 @@
   },
   "files": [
     "manifest.yml",
-    "index.js"
+    "src"
   ],
   "devDependencies": {
     "husky": "^4.3.0",
