@@ -1,11 +1,13 @@
 const {existsSync} = require('fs');
 const {appendFile, readFile, readdir} = require('fs').promises;
 const {join} = require('path');
+
 const toml = require('@iarna/toml');
 const cpx = require('cpx');
 const build = require('netlify-lambda/lib/build');
 
 const functionsBuildDir = `functions-build-${Date.now()}`;
+const nimConfig = join(require('os').homedir(), '.nimbella');
 let netlifyToml = {};
 let isProject = false;
 let isActions = false;
@@ -54,39 +56,51 @@ async function deployActions({run, functionsDir, timeout, memory}) {
 module.exports = {
   // Execute before build starts.
   onPreBuild: async ({utils, constants, inputs}) => {
-    try {
-      if (!process.env.NIMBELLA_LOGIN_TOKEN) {
+    if (
+      !process.env.NIMBELLA_LOGIN_TOKEN &&
+      !(await utils.cache.has(nimConfig))
+    ) {
+      utils.build.failBuild(
+        'Nimbella login token is not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
+      );
+    }
+
+    await utils.cache.restore(nimConfig);
+
+    const loggedIn = existsSync(nimConfig);
+    // Login if not logged in before.
+    if (loggedIn) {
+      try {
+        const {stdout} = await utils.run.command('nim auth current', {
+          stdout: 'pipe'
+        });
+        console.log(`Using the following namespace: ${stdout}`);
+      } catch (error) {
         utils.build.failBuild(
-          'Nimbella login token not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
+          'Failed to retrieve the current namespace from cache',
+          {error}
         );
       }
-
-      const nimConfig = join(require('os').homedir(), '.nimbella');
-      await utils.cache.restore(nimConfig);
-
-      const loggedIn = existsSync(nimConfig);
-      // Login if not logged in before.
-      if (loggedIn) {
-        console.log('\nUsing the following namespace.');
-        await utils.run.command('nim auth current');
-      } else {
+    } else {
+      try {
         await utils.run.command(
           `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
         );
-
         // Cache the nimbella config to avoid logging in for consecutive builds.
         await utils.cache.save(nimConfig);
+      } catch (error) {
+        utils.build.failBuild('Failed to login using the provided token', {
+          error
+        });
       }
-
-      if (constants.CONFIG_PATH && existsSync(constants.CONFIG_PATH)) {
-        netlifyToml = toml.parse(await readFile(constants.CONFIG_PATH));
-      }
-
-      isActions = inputs.functions ? existsSync(inputs.functions) : false;
-      isProject = existsSync('packages');
-    } catch (error) {
-      utils.build.failBuild(error.message);
     }
+
+    if (constants.CONFIG_PATH && existsSync(constants.CONFIG_PATH)) {
+      netlifyToml = toml.parse(await readFile(constants.CONFIG_PATH));
+    }
+
+    isActions = inputs.functions ? existsSync(inputs.functions) : false;
+    isProject = existsSync('packages');
   },
   // Build the functions
   onBuild: async ({utils, inputs}) => {
@@ -99,88 +113,94 @@ module.exports = {
         cpx.copy(inputs.functions + '/**/*.!(js)', functionsBuildDir);
       }
     } catch (error) {
-      utils.build.failBuild(error.message);
+      utils.build.failBuild('Failed to build the functions', {error});
     }
   },
   // Execute after build is done.
   onPostBuild: async ({constants, utils, inputs}) => {
-    try {
-      const {stdout: namespace} = await utils.run.command(`nim auth current`);
+    const {stdout: namespace} = await utils.run.command(`nim auth current`);
 
-      if (process.env.CONTEXT === 'production') {
-        if (isProject) {
+    if (process.env.CONTEXT === 'production') {
+      if (isProject) {
+        try {
           await deployProject(utils.run);
+        } catch (error) {
+          utils.build.failBuild('Failed to deploy the project', {error});
         }
+      }
 
-        if (isActions) {
-          console.log('\n------------------Functions------------------\n');
+      if (isActions) {
+        console.log('\n------------------Functions------------------\n');
+        try {
           await deployActions({
             run: utils.run,
             functionsDir: functionsBuildDir,
             timeout: inputs.timeout, // Default is 6 seconds
             memory: inputs.memory // Default is 256MB (max for free tier)
           });
+        } catch (error) {
+          utils.build.failBuild('Failed to deploy the functions', {error});
         }
-      } else {
+      }
+    } else {
+      console.log(
+        `Skipping the deployment to Nimbella as the context (${process.env.CONTEXT}) is not production.`
+      );
+    }
+
+    const redirectRules = [];
+    const redirects = [];
+    const redirectsFile = join(constants.PUBLISH_DIR, '_redirects');
+
+    if (isActions) {
+      if (existsSync(redirectsFile)) {
         console.log(
-          `Skipping the deployment to Nimbella as the context (${process.env.CONTEXT}) is not production.`
+          "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
         );
+        const {parseRedirectsFormat} = require('netlify-redirect-parser');
+        const {success} = await parseRedirectsFormat(redirectsFile);
+        redirects.push(...success);
       }
 
-      const redirectRules = [];
-      const redirects = [];
-      const redirectsFile = join(constants.PUBLISH_DIR, '_redirects');
+      if (netlifyToml.redirects) {
+        console.log(
+          "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+        );
+        redirects.push(...netlifyToml.redirects);
+      }
 
-      if (isActions) {
-        if (existsSync(redirectsFile)) {
-          console.log(
-            "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+      for (const redirect of redirects) {
+        if (
+          redirect.status === 200 &&
+          redirect.to.startsWith('/.netlify/functions/')
+        ) {
+          const redirectPath = redirect.to.split('/.netlify/functions/')[1];
+          redirectRules.push(
+            `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
           );
-          const {parseRedirectsFormat} = require('netlify-redirect-parser');
-          const {success} = await parseRedirectsFormat(redirectsFile);
-          redirects.push(...success);
-        }
-
-        if (netlifyToml.redirects) {
-          console.log(
-            "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-          );
-          redirects.push(...netlifyToml.redirects);
-        }
-
-        for (const redirect of redirects) {
-          if (
-            redirect.status === 200 &&
-            redirect.to.startsWith('/.netlify/functions/')
-          ) {
-            const redirectPath = redirect.to.split('/.netlify/functions/')[1];
-            redirectRules.push(
-              `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
-            );
-          }
         }
       }
+    }
 
-      let {path: redirectPath} = inputs;
-      redirectPath = redirectPath.endsWith('/')
-        ? redirectPath
-        : redirectPath + '/';
+    let {path: redirectPath} = inputs;
+    redirectPath = redirectPath.endsWith('/')
+      ? redirectPath
+      : redirectPath + '/';
 
-      if (isProject) {
-        redirectRules.push(
-          `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
-        );
-      }
+    if (isProject) {
+      redirectRules.push(
+        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
+      );
+    }
 
-      if (isActions && !isProject) {
-        redirectRules.push(
-          `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
-        );
-      }
+    if (isActions && !isProject) {
+      redirectRules.push(
+        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
+      );
+    }
 
+    if (redirectRules.length > 0) {
       await appendFile(redirectsFile, redirectRules.join('\n'));
-    } catch (error) {
-      utils.build.failBuild(error.message);
     }
   }
 };
