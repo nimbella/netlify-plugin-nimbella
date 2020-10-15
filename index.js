@@ -41,11 +41,11 @@ async function deployActions({run, functionsDir, timeout, memory}) {
         command += '--kind nodejs-lambda:10 --main handler';
       }
 
-      const {stderr, exitCode} = await run.command(command, {
+      const {stderr, exitCode, failed} = await run.command(command, {
         reject: false,
         stdout: 'ignore'
       });
-      const message = exitCode === 0 ? 'done.' : String(stderr);
+      const message = exitCode === 0 && !failed ? 'done.' : String(stderr);
       console.log(`Deploying ${file}: ${message}`);
     })
   );
