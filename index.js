@@ -28,31 +28,27 @@ async function deployProject(run) {
  */
 async function deployActions({run, functionsDir, timeout, memory}) {
   const files = await readdir(functionsDir);
-  for (const file of files) {
-    const [actionName, extension] = file.split('.');
-    let command =
-      `nim action update ${actionName} ${join(functionsDir, file)} ` +
-      `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
-      `--web=raw `;
 
-    if (extension === 'js') {
-      command += '--kind nodejs-lambda:10 --main handler';
-    }
+  await Promise.all(
+    files.map(async (file) => {
+      const [actionName, extension] = file.split('.');
+      let command =
+        `nim action update ${actionName} ${join(functionsDir, file)} ` +
+        `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
+        `--web=raw `;
 
-    // Deploy
-    console.log(`Deploying ${file}...`);
-    // eslint-disable-next-line no-await-in-loop
-    const {stdout, stderr, exitCode} = await run.command(command, {
-      reject: false,
-      stdout: 'ignore'
-    });
+      if (extension === 'js') {
+        command += '--kind nodejs-lambda:10 --main handler';
+      }
 
-    if (exitCode === 0) {
-      console.log('done.');
-    } else {
-      console.log(stdout || stderr);
-    }
-  }
+      const {stderr, exitCode} = await run.command(command, {
+        reject: false,
+        stdout: 'ignore'
+      });
+      const message = exitCode === 0 ? 'done.' : String(stderr);
+      console.log(`Deploying ${file}: ${message}`);
+    })
+  );
 }
 
 module.exports = {
