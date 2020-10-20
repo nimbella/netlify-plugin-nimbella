@@ -9,6 +9,7 @@
 The Nimbella add-on for Netlify is a Netlify Build Plugin that extends Netlify Sites with portable and stateful serverless functions using [Nimbella](https://nimbella.com/product/platform). The add-on enables developers to deploy sites to Netlify's CDN, and serverless functions and stateful APIs to the [Nimbella Cloud](https://nimbella.com).
 
 The Nimbella add-on provides the following benefits.
+
 1. **More runtimes:** implement functions in numerous languages including Python, Rust, Swift, Ruby, PHP, Java, Go, Node, and Deno.
 2. **Resource customization:** run functions for longer durations, and with more memory.
 3. **Support for key-value and object stores:** build stateful APIs, and handle images or files.
@@ -36,6 +37,7 @@ Learn more about the Nimbella add-on for Netlify [on our website](https://nimbel
 
 Add the Nimbella add-on for Netlify to connect your Netlify site to Nimbella.
 To do that, run the following command from the base of your local project directory which is linked to your Netlify site.
+
 ```sh
 netlify addons:create nimbella
 ```
@@ -123,10 +125,17 @@ package = "netlify-plugin-nimbella"
 + functions = "functions" # Functions source directory. Use this if you would like to use Nimbella to deploy your functions.
 ```
 
+To be able to pass **environment variables** to functions, you should first set them as Netlify build environment variables and use the below plugin input to selectively forward the variables to functions deployed on Nimbella.
+
+```toml
+[plugins.inputs]
+envs = ['ENV_ONE', 'ENV_TWO']
+```
+
 This plugin builds your functions using a modified version of [netlify-lambda](https://github.com/netlify/netlify-lambda). You can get rid of any build steps you're performing on functions since the plugin handles it for you.
 
 **Notes:**
-- None of environment variables present in the Netlify build runtime are made available to the deployed functions on Nimbella Cloud. _An enhancement to permit selective forwarding of environment variables is coming soon._
+
 - Replace occurrences of `/.netlify/functions` in your API calls with `/.netlify/nimbella`, or use `/api`, as your API path instead.
 - All Netlify functions are deployed to a "default" package in your Nimbella namespace. The package name is required in the API path. For Netlify functions, the path will be `/.netlify/nimbella/default/` or `/api/default`. For named packages, replace `default` with your package name instead.
 

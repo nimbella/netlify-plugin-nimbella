@@ -8,6 +8,9 @@ inputs:
   - name: memory
     description: Maximum memory LIMIT in MB for the function (functions input value is required to utilize this option).
     default: 256
+  - name: envs
+    description: Specify the names of the environment variables that need to be forwarded from Netlify CI to Nimbella Functions (functions input value is required to utilize this option).
+    default: []
   - name: path
     description: The API prefix path you would like to use to access your functions.
     default: '/api/'
