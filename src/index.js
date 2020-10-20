@@ -193,6 +193,7 @@ module.exports = {
       for (const redirect of redirects) {
         if (
           redirect.status === 200 &&
+          redirect.to &&
           redirect.to.startsWith('/.netlify/functions/')
         ) {
           const redirectPath = redirect.to.split('/.netlify/functions/')[1];
