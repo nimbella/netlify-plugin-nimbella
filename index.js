@@ -1,13 +1,14 @@
 const {existsSync} = require('fs');
-const {appendFile, readFile, readdir} = require('fs').promises;
+const {appendFile, readFile, readdir, writeFile} = require('fs').promises;
 const {join} = require('path');
+const {homedir, tmpdir} = require('os');
 
 const toml = require('@iarna/toml');
 const cpx = require('cpx');
 const build = require('netlify-lambda/lib/build');
 
 const functionsBuildDir = `functions-build-${Date.now()}`;
-const nimConfig = join(require('os').homedir(), '.nimbella');
+const nimConfig = join(homedir(), '.nimbella');
 let netlifyToml = {};
 let isProject = false;
 let isActions = false;
@@ -28,22 +29,30 @@ async function deployProject(run) {
  * @param {function} run - function provided under utils by Netlify to build event functions.
  * @param {string} functionsDir - Path to the actions directory.
  */
-async function deployActions({run, functionsDir, timeout, memory}) {
+async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
   const files = await readdir(functionsDir);
+  if (!existsSync(envsFile)) {
+    envsFile = false;
+  }
 
   await Promise.all(
     files.map(async (file) => {
       const [actionName, extension] = file.split('.');
-      let command =
-        `nim action update ${actionName} ${join(functionsDir, file)} ` +
-        `--timeout=${Number(timeout)} --memory=${Number(memory)} ` +
-        `--web=raw `;
+      const command = [
+        `nim action update ${actionName} ${join(functionsDir, file)}`,
+        `--timeout=${Number(timeout)} --memory=${Number(memory)} `,
+        `--web=raw`
+      ];
 
       if (extension === 'js') {
-        command += '--kind nodejs-lambda:10 --main handler';
+        command.push('--kind nodejs-lambda:10 --main handler');
       }
 
-      const {stderr, exitCode, failed} = await run.command(command, {
+      if (envsFile) {
+        command.push(`--env-file=${envsFile}`);
+      }
+
+      const {stderr, exitCode, failed} = await run.command(command.join(' '), {
         reject: false,
         stdout: 'ignore'
       });
@@ -132,8 +141,20 @@ module.exports = {
       if (isActions) {
         console.log('\n------------------Functions------------------\n');
         try {
+          if (inputs.envs.length > 0) {
+            const envs = {};
+            let envMessage = 'Forwarded the following environment variables: ';
+            inputs.envs.forEach((env, index) => {
+              envs[env] = process.env[env];
+              envMessage += index === inputs.envs.length - 1 ? env : env + ', ';
+            });
+            await writeFile(join(tmpdir(), 'env.json'), JSON.stringify(envs));
+            console.log(envMessage);
+          }
+
           await deployActions({
             run: utils.run,
+            envsFile: join(tmpdir(), 'env.json'),
             functionsDir: functionsBuildDir,
             timeout: inputs.timeout, // Default is 6 seconds
             memory: inputs.memory // Default is 256MB (max for free tier)
