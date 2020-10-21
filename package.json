@@ -1,11 +1,11 @@
 {
   "name": "netlify-plugin-nimbella",
   "version": "1.7.0",
-  "main": "index.js",
+  "main": "src/index.js",
   "description": "Nimbella add-on for Netlify to extends Netlify Sites with serverless functions and stateful APIs using Nimbella Cloud.",
   "scripts": {
     "setup": "yarn install",
-    "test": "xo"
+    "test": "xo && jest --coverage"
   },
   "repository": {
     "type": "git",
@@ -34,7 +34,11 @@
   },
   "xo": {
     "space": true,
-    "prettier": true
+    "prettier": true,
+    "envs": [
+      "node",
+      "jest"
+    ]
   },
   "engines": {
     "node": ">=12.0.0"
@@ -46,10 +50,18 @@
   },
   "files": [
     "manifest.yml",
-    "index.js"
+    "src"
   ],
+  "jest": {
+    "testMatch": [
+      "**/test/**/*.js"
+    ],
+    "verbose": true
+  },
   "devDependencies": {
     "husky": "^4.3.0",
+    "jest": "^26.5.3",
+    "mock-fs": "^4.13.0",
     "xo": "^0.33.0"
   }
 }
