@@ -222,6 +222,11 @@ module.exports = {
     }
 
     if (redirectRules.length > 0) {
+      if (!existsSync(constants.PUBLISH_DIR)) {
+        const mkdir = require('make-dir');
+        await mkdir(constants.PUBLISH_DIR);
+      }
+
       await appendFile(redirectsFile, redirectRules.join('\n'));
     }
   }
