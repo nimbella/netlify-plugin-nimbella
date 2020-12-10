@@ -31,7 +31,7 @@
     "make-dir": "^3.1.0",
     "netlify-lambda": "satyarohith/netlify-lambda#88eac6a37bfb0920897c86ecda8682944a2bf5be",
     "netlify-redirect-parser": "^2.5.0",
-    "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nim-v1.8.0/nim-v1.8.0.tar.gz"
+    "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz"
   },
   "xo": {
     "space": true,
