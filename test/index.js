@@ -1,5 +1,6 @@
 const path = require('path')
 
+const fs = require('fs')
 const mockFs = require('mock-fs')
 const build = require('netlify-lambda/lib/build')
 
@@ -218,9 +219,12 @@ describe('onPostBuild()', () => {
   test('should rewrite existing redirects to .netlify/functions/ in netlify.toml if functions are used', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
-    utils.run.command.mockReturnValue({
-      stdout: 'namespace'
+    utils.run.command = jest.fn((cmd) => {
+      if (cmd === 'nim auth current') return {stdout: 'namespace'}
+      if (cmd === 'nim auth current --apihost') return {stdout: 'somehost'}
+      return {stdout: '???'}
     })
+
     const pluginInputs = {
       utils,
       constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
@@ -244,9 +248,15 @@ describe('onPostBuild()', () => {
     })
     await plugin.onPreBuild(pluginInputs)
     await plugin.onPostBuild(pluginInputs)
+    const redirects = String(fs.readFileSync('_redirects'))
     mockFs.restore()
+
     expect(console.log.mock.calls[1][0]).toEqual(
       "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+    )
+
+    expect(redirects).toEqual(
+      '/* https://somehost/api/v1/web/namespace/default/:splat 200!'
     )
   })
 })
