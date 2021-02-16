@@ -92,9 +92,20 @@ module.exports = {
       }
     } else {
       try {
-        await utils.run.command(
-          `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
-        )
+        if (
+          process.env.NIMBELLA_API_HOST &&
+          process.env.NIMBELLA_API_HOST !== ''
+        ) {
+          await utils.run.command(
+            `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN} --apihost ${process.env.NIMBELLA_API_HOST}`
+          )
+        } else {
+          // Delegate to default apihost configured in the cli.
+          await utils.run.command(
+            `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
+          )
+        }
+
         // Cache the nimbella config to avoid logging in for consecutive builds.
         await utils.cache.save(nimConfig)
       } catch (error) {
@@ -172,6 +183,10 @@ module.exports = {
     const redirectRules = []
     const redirects = []
     const redirectsFile = join(constants.PUBLISH_DIR, '_redirects')
+    let {stdout: apihost} = await utils.run.command(
+      `nim auth current --apihost`
+    )
+    apihost = apihost.replace(/^(https:\/\/)/, '')
 
     if (isActions) {
       if (existsSync(redirectsFile)) {
@@ -198,7 +213,7 @@ module.exports = {
         ) {
           const redirectPath = redirect.to.split('/.netlify/functions/')[1]
           redirectRules.push(
-            `${redirect.from} https://apigcp.nimbella.io/api/v1/web/${namespace}/default/${redirectPath} 200!`
+            `${redirect.from} https://${apihost}/api/v1/web/${namespace}/default/${redirectPath} 200!`
           )
         }
       }
@@ -211,13 +226,13 @@ module.exports = {
 
     if (isProject) {
       redirectRules.push(
-        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/:splat 200!`
+        `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
       )
     }
 
     if (isActions && !isProject) {
       redirectRules.push(
-        `${redirectPath}* https://apigcp.nimbella.io/api/v1/web/${namespace}/default/:splat 200!`
+        `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/default/:splat 200!`
       )
     }
 
