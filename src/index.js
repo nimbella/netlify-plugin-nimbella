@@ -2,10 +2,10 @@ const {existsSync} = require('fs')
 const {appendFile, readFile, readdir, writeFile} = require('fs').promises
 const {join} = require('path')
 const {homedir, tmpdir} = require('os')
-
 const toml = require('@iarna/toml')
 const cpx = require('cpx')
 const build = require('netlify-lambda/lib/build')
+const {parseRedirectsFormat} = require('netlify-redirect-parser')
 
 const functionsBuildDir = `functions-build-${Date.now()}`
 const nimConfig = join(homedir(), '.nimbella')
@@ -188,12 +188,26 @@ module.exports = {
     )
     apihost = apihost.replace(/^(https:\/\/)/, '')
 
+    // Creates or updates the _redirects file; this file takes precedence
+    // over other redirect declarations, and is processed from top to bottom
+    //
+    // First: if we deployed netlify functions to nimbella, scan the redirects
+    // for matching rewrites with /.netlify/functions/* as their target
+    // and remap them to their nimbella api end points.
+    //
+    // Second: if there is an API path directive input.api, add a matching rule
+    // to the _redirects file. The target is either the Nimbella namespace/:splat
+    // or namespace/default/:splat. The latter is used when deploying Netlify functions
+    // to Nimbella.
+    //
+    // The first set of rewrites is pre-pended to the _redirects file, then the second
+    // set, if any.
+
     if (isActions) {
       if (existsSync(redirectsFile)) {
         console.log(
           "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
         )
-        const {parseRedirectsFormat} = require('netlify-redirect-parser')
         const {success} = await parseRedirectsFormat(redirectsFile)
         redirects.push(...success)
       }
@@ -213,7 +227,9 @@ module.exports = {
         ) {
           const redirectPath = redirect.to.split('/.netlify/functions/')[1]
           redirectRules.push(
-            `${redirect.from} https://${apihost}/api/v1/web/${namespace}/default/${redirectPath} 200!`
+            `${
+              redirect.from || redirect.path
+            } https://${apihost}/api/v1/web/${namespace}/default/${redirectPath} 200!`
           )
         }
       }
@@ -237,12 +253,17 @@ module.exports = {
     }
 
     if (redirectRules.length > 0) {
-      if (!existsSync(constants.PUBLISH_DIR)) {
+      let content = ''
+      if (existsSync(redirectsFile)) {
+        content = await readFile(redirectsFile)
+      } else if (!existsSync(constants.PUBLISH_DIR)) {
         const mkdir = require('make-dir')
         await mkdir(constants.PUBLISH_DIR)
       }
 
-      await appendFile(redirectsFile, redirectRules.join('\n'))
+      // The rewrites take precedence
+      await writeFile(redirectsFile, redirectRules.join('\n') + '\n')
+      await appendFile(redirectsFile, content)
     }
   }
 }

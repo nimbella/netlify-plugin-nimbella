@@ -229,7 +229,7 @@ describe('onPostBuild()', () => {
       utils,
       constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
       inputs: {
-        path: '',
+        path: '/api',
         functions: 'some-dir'
       }
     }
@@ -237,26 +237,105 @@ describe('onPostBuild()', () => {
     mockFs({
       'netlify.toml': `
         [[redirects]]
-        from = "/*"
+        from = "/home"
         to = "/index.html"
         status = 200
-        `,
+
+        [[redirects]]
+        from = "/somefn"
+        to = "/.netlify/functions/fn"
+        status = 200
+      `,
       'some-dir': {
         'create.js': '',
         'update.js': ''
       }
     })
+
     await plugin.onPreBuild(pluginInputs)
     await plugin.onPostBuild(pluginInputs)
-    const redirects = String(fs.readFileSync('_redirects'))
+    const redirects = String(fs.readFileSync('_redirects')).trim().split('\n')
     mockFs.restore()
 
     expect(console.log.mock.calls[1][0]).toEqual(
       "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
     )
 
-    expect(redirects).toEqual(
-      '/* https://somehost/api/v1/web/namespace/default/:splat 200!'
+    expect(redirects.length).toEqual(2)
+    expect(redirects[0]).toEqual(
+      '/somefn https://somehost/api/v1/web/namespace/default/fn 200!'
     )
+    expect(redirects[1]).toEqual(
+      '/api/* https://somehost/api/v1/web/namespace/default/:splat 200!'
+    )
+  })
+
+  test('should rewrite existing redirects to .netlify/functions/ in netlify.toml or _redirects if functions are used', async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.CONTEXT = 'production'
+    utils.run.command = jest.fn((cmd) => {
+      if (cmd === 'nim auth current') return {stdout: 'namespace'}
+      if (cmd === 'nim auth current --apihost') return {stdout: 'somehost'}
+      return {stdout: '???'}
+    })
+
+    const pluginInputs = {
+      utils,
+      constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
+      inputs: {
+        path: '/api',
+        functions: 'some-dir'
+      }
+    }
+
+    mockFs({
+      'netlify.toml': `
+        [[redirects]]
+        from = "/home"
+        to = "/index.html"
+        status = 200
+
+        [[redirects]]
+        from = "/somefn"
+        to = "/.netlify/functions/fn1"
+        status = 200
+      `,
+      'some-dir': {
+        'create.js': '',
+        'update.js': ''
+      },
+      _redirects: [
+        '/mypath https://example.com',
+        '/fn2 /.netlify/functions/fn2 200'
+      ].join('\n')
+    })
+
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onPostBuild(pluginInputs)
+    const redirects = String(fs.readFileSync('_redirects'))
+      .split('\n')
+      .filter((_) => _)
+    mockFs.restore()
+
+    expect(console.log.mock.calls[1][0]).toEqual(
+      "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+    )
+
+    expect(console.log.mock.calls[2][0]).toEqual(
+      "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+    )
+
+    expect(redirects.length).toEqual(5)
+    expect(redirects[0]).toEqual(
+      '/fn2 https://somehost/api/v1/web/namespace/default/fn2 200!'
+    ) // _redirects rewrites is first
+    expect(redirects[1]).toEqual(
+      '/somefn https://somehost/api/v1/web/namespace/default/fn1 200!'
+    ) // Then toml rewrite
+    expect(redirects[2]).toEqual(
+      '/api/* https://somehost/api/v1/web/namespace/default/:splat 200!'
+    ) // And input directive
+    expect(redirects[3]).toEqual('/mypath https://example.com') // Original rewrites come last
+    expect(redirects[4]).toEqual('/fn2 /.netlify/functions/fn2 200') // Original rewrites come last
   })
 })
