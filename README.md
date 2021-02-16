@@ -114,6 +114,9 @@ Your Nimbella project may also include a `web` folder which can be deployed to t
 web = true
 ```
 
+## Cleaning your Nimbella Namespace
+
+The Nimbella project configuration (`project.yml`) allows for cleaning your namespace, or deployed API package. See [the documentation](https://docs.nimbella.com/configuration#adding-project-configuration) for more details on sanitizing the namespace between deployments.
 
 ## Exporting Environment Variables to Serverless APIs
 
