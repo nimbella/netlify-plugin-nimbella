@@ -92,9 +92,18 @@ module.exports = {
       }
     } else {
       try {
-        await utils.run.command(
-          `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
-        )
+        const apihost = process.env.NIMBELLA_API_HOST
+        if (apihost) {
+          await utils.run.command(
+            `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN} --apihost ${apihost}`
+          )
+        } else {
+          // Delegate to default apihost configured in the cli.
+          await utils.run.command(
+            `nim auth login ${process.env.NIMBELLA_LOGIN_TOKEN}`
+          )
+        }
+
         // Cache the nimbella config to avoid logging in for consecutive builds.
         await utils.cache.save(nimConfig)
       } catch (error) {
