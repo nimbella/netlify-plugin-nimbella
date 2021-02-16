@@ -230,6 +230,54 @@ describe('onBuild()', () => {
       `nim project deploy . --exclude=web`
     )
   })
+
+  test("should run nim project deploy excluding 'web' if inputs.web is not set", async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.CONTEXT = 'production'
+
+    const pluginInputs = {
+      utils,
+      constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
+      inputs: {
+        path: ''
+      }
+    }
+
+    mockFs({
+      packages: {},
+      web: {}
+    })
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onBuild(pluginInputs)
+    mockFs.restore()
+
+    expect(utils.run.command.mock.calls[1][0]).toEqual(
+      `nim project deploy . --exclude=web`
+    )
+  })
+
+  test("should run nim project deploy if 'web' directory exists and inputs.web is set", async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.CONTEXT = 'production'
+
+    const pluginInputs = {
+      utils,
+      constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
+      inputs: {
+        path: '',
+        web: 'true'
+      }
+    }
+
+    mockFs({
+      web: {}
+    })
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onBuild(pluginInputs)
+    mockFs.restore()
+
+    expect(utils.run.command.mock.calls[1][0]).toEqual(`nim project deploy .`)
+  })
 })
 
 describe('onPostBuild()', () => {
@@ -331,6 +379,60 @@ describe('onPostBuild()', () => {
     expect(redirects[0]).toEqual(
       '/api/* https://somehost/api/v1/web/namespace/:splat 200!'
     ) // And input directive
+    expect(redirects[1]).toEqual('/mypath https://example.com') // Original rewrites come last
+    expect(redirects[2]).toEqual('/fn2 /.netlify/functions/fn2 200') // Original rewrites come last
+  })
+
+  test('should proxy entire domain if deploying web assets', async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.CONTEXT = 'production'
+
+    utils.run.command = jest.fn((cmd) => {
+      if (cmd === 'nim auth current') return {stdout: 'namespace'}
+      if (cmd === 'nim auth current --apihost') return {stdout: 'somehost'}
+      return {stdout: '???'}
+    })
+
+    const pluginInputs = {
+      utils,
+      constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
+      inputs: {
+        path: '/api',
+        web: 'true'
+      }
+    }
+
+    mockFs({
+      packages: {},
+      web: {},
+      'netlify.toml': `
+        [[redirects]]
+        from = "/home"
+        to = "/index.html"
+        status = 200
+
+        [[redirects]]
+        from = "/somefn"
+        to = "/.netlify/functions/fn"
+        status = 200
+      `,
+      'some-dir': {
+        'create.js': '',
+        'update.js': ''
+      },
+      _redirects: [
+        '/mypath https://example.com',
+        '/fn2 /.netlify/functions/fn2 200'
+      ].join('\n')
+    })
+
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onPostBuild(pluginInputs)
+    const redirects = String(fs.readFileSync('_redirects')).trim().split('\n')
+    mockFs.restore()
+
+    expect(redirects.length).toEqual(3)
+    expect(redirects[0]).toEqual('/* https://namespace-somehost/:splat 200!') // And input directive
     expect(redirects[1]).toEqual('/mypath https://example.com') // Original rewrites come last
     expect(redirects[2]).toEqual('/fn2 /.netlify/functions/fn2 200') // Original rewrites come last
   })

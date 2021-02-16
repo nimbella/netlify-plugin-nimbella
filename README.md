@@ -75,6 +75,7 @@ package = "netlify-plugin-nimbella"
 
 [plugins.inputs]
 path    = "/api"   # The prefix path to access your deployed packages.
+web     = false    # Deploy frontend and proxy domain to Nimbella (allowed values are true or false).
 env     = []       # Environment variables to export to serverless APIs.
 ```
 
@@ -104,6 +105,15 @@ site
 ```
 
 The APIs are `auth/login`, `auth/logout`, `todos/create`, and so on. An API may be a single file, or built from a set of files within an enclosing directory. You may mix languages, and deploy functions as source, without even building languages that require compilation. To API end point for any of the actions is constructed in the same way. For example the serverless API implemented by `auth/login/index.js` is invoked with the REST end point `https://your-site.com/api/auth/login`.
+
+Your Nimbella project may also include a `web` folder which can be deployed to the Nimbella cloud as well. The web folder represents the frontend assets for your projects (e.g., HTML, CSS, JavaScript). In a typical deployment of a Nimbella project using Netlify, you will use the Netlify CDN to serve your web assets. There are however some use-cases where you want to deploy the entire project to Nimbella, and proxy to your Nimbella domain from your Netlify site. To do this, you need to enable the deployment of the web portion of your project by setting an option `web = true` in the `plugins.inputs` section of your `netlify.toml` file.
+
+```toml
+[plugins.inputs]
+# Deploy the web folder and proxy your site entirely to your Nimbella deployment.
+web = true
+```
+
 
 ## Exporting Environment Variables to Serverless APIs
 

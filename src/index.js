@@ -5,6 +5,7 @@ const {homedir} = require('os')
 
 const nimConfig = join(homedir(), '.nimbella')
 let isProject = false
+let deployWeb = false
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1'
@@ -21,9 +22,14 @@ async function getApiHost(run) {
 /**
  * Deploy a Nimbella Project.
  * @param {*} run - function provided under utils by Netlify to build event functions.
+ * @param {bool} includeWeb - flag to include/exclude web assets from project deploy
  */
-async function deployProject(run) {
-  await run.command(`nim project deploy . --exclude=web`)
+async function deployProject(run, includeWeb) {
+  if (includeWeb) {
+    await run.command(`nim project deploy .`) // Do not exclude web folder
+  } else {
+    await run.command(`nim project deploy . --exclude=web`)
+  }
 }
 
 // Creates or updates the _redirects file; this file takes precedence
@@ -31,17 +37,25 @@ async function deployProject(run) {
 //
 // If there is an API path directive input.path in the plugin settings, add a
 // matching rule to the _redirects file. The target is the Nimbella namespace/:splat.
+//
+// If deploying the web assets as well, then proxy the entire domain instead.
 async function processRedirects(run, inputs) {
   const redirectRules = []
   const {stdout: namespace} = await run.command(`nim auth current`)
   const apihost = await getApiHost(run)
 
-  let {path: redirectPath} = inputs
-  redirectPath = redirectPath.endsWith('/') ? redirectPath : redirectPath + '/'
-  if (redirectPath) {
-    redirectRules.push(
-      `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
-    )
+  if (deployWeb) {
+    redirectRules.push(`/* https://${namespace}-${apihost}/:splat 200!`)
+  } else {
+    let {path: redirectPath} = inputs
+    redirectPath = redirectPath.endsWith('/')
+      ? redirectPath
+      : redirectPath + '/'
+    if (redirectPath) {
+      redirectRules.push(
+        `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
+      )
+    }
   }
 
   return redirectRules
@@ -49,7 +63,7 @@ async function processRedirects(run, inputs) {
 
 module.exports = {
   // Execute before build starts.
-  onPreBuild: async ({utils}) => {
+  onPreBuild: async ({utils, inputs}) => {
     if (
       !process.env.NIMBELLA_LOGIN_TOKEN &&
       !(await utils.cache.has(nimConfig))
@@ -100,7 +114,14 @@ module.exports = {
       }
     }
 
-    isProject = existsSync('packages')
+    deployWeb = false
+    if (typeof inputs.web === 'boolean') {
+      deployWeb = inputs.web
+    } else if (typeof inputs.web === 'string') {
+      deployWeb = inputs.web.toLowerCase() === 'true'
+    }
+
+    isProject = existsSync('packages') || (deployWeb && existsSync('web'))
   },
   // Build and deploy the Nimbella project
   onBuild: async ({utils, inputs}) => {
@@ -117,7 +138,7 @@ module.exports = {
         }
 
         try {
-          await deployProject(utils.run)
+          await deployProject(utils.run, deployWeb)
         } catch (error) {
           utils.build.failBuild('Failed to build and deploy the project', {
             error
