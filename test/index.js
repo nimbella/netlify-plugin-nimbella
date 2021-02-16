@@ -33,6 +33,51 @@ afterEach(() => {
 })
 
 describe('preBuild()', () => {
+  test('Login to default api host', async () => {
+    // Prepare
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    delete process.env.NIMBELLA_API_HOST
+    utils.cache.has.mockResolvedValue(false)
+
+    const mockFiles = {
+      [require('os').homedir()]: {}
+    }
+    mockFs(mockFiles)
+    await plugin.onPreBuild({
+      utils,
+      constants: {},
+      inputs: {}
+    })
+    mockFs.restore()
+
+    expect(utils.run.command.mock.calls[0][0]).toEqual(
+      `nim auth login somevalue`
+    )
+  })
+
+  test('Login to specified api host', async () => {
+    // Prepare
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.NIMBELLA_API_HOST = 'somehost'
+    utils.cache.has.mockResolvedValue(false)
+
+    const mockFiles = {
+      [require('os').homedir()]: {}
+    }
+
+    mockFs(mockFiles)
+    await plugin.onPreBuild({
+      utils,
+      constants: {},
+      inputs: {}
+    })
+    mockFs.restore()
+
+    expect(utils.run.command.mock.calls[0][0]).toEqual(
+      `nim auth login somevalue --apihost somehost`
+    )
+  })
+
   test('show token not available message when login token not set', async () => {
     // Prepare
     process.env.NIMBELLA_LOGIN_TOKEN = ''
