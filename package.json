@@ -5,7 +5,9 @@
   "description": "Nimbella add-on for Netlify to extends Netlify Sites with serverless functions and stateful APIs using Nimbella Cloud.",
   "scripts": {
     "setup": "yarn install",
-    "test": "xo && jest --coverage"
+    "test": "xo --no-semicolon && jest --coverage",
+    "lint": "xo --no-semicolon",
+    "lint-fix": "xo --no-semicolon --fix"
   },
   "repository": {
     "type": "git",
