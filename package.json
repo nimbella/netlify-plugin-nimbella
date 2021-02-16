@@ -1,14 +1,14 @@
 {
   "name": "netlify-plugin-nimbella",
-  "version": "1.8.0",
+  "version": "2.0.0",
   "main": "src/index.js",
-  "description": "Nimbella add-on for Netlify to extends Netlify Sites with serverless functions and stateful APIs using Nimbella Cloud.",
+  "description": "Nimbella add-on for Netlify to extends Netlify Sites with stateful serverless APIs using Nimbella Cloud.",
   "scripts": {
     "setup": "yarn install",
-    "precommit": "xo --no-semicolon && jest --coverage",
+    "precommit": "xo && jest --coverage",
     "test": "jest --coverage",
-    "lint": "xo --no-semicolon",
-    "lint-fix": "xo --no-semicolon --fix"
+    "lint": "xo",
+    "lint-fix": "xo --fix"
   },
   "repository": {
     "type": "git",
@@ -29,15 +29,12 @@
   },
   "homepage": "https://github.com/nimbella/netlify-plugin-nimbella#readme",
   "dependencies": {
-    "@iarna/toml": "^2.2.5",
-    "cpx": "^1.5.0",
     "make-dir": "^3.1.0",
-    "netlify-lambda": "satyarohith/netlify-lambda#88eac6a37bfb0920897c86ecda8682944a2bf5be",
-    "netlify-redirect-parser": "^2.5.0",
     "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz"
   },
   "xo": {
     "space": true,
+    "semicolon": false,
     "prettier": true,
     "envs": [
       "node",

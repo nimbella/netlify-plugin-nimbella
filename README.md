@@ -19,14 +19,15 @@ The Nimbella add-on provides the following benefits.
 Learn more about the Nimbella add-on for Netlify [on our website](https://nimbella.com/integrations/netlify).
 
 - [Add-On Setup](#add-on-setup)
-  - [New to Nimbella](#new-to-nimbella)
-  - [Existing Nimbella User](#existing-nimbella-developer)
-  - [Minimal Netlify TOML Configuration](#minimal-netlify-toml-configuration)
-- [Usage](#usage)
-  - [Use Nimbella Projects with Netlify Sites](#use-nimbella-projects-with-netlify-sites)
-- [Examples](#examples)
-- [Support](#support)
-- [License](#license)
+  - [New to Nimbella](#New-to-Nimbella)
+  - [Existing Nimbella User](#Existing-Nimbella-Developer)
+  - [Minimal Netlify TOML Configuration](#Minimal-Netlify-TOML-Configuration)
+- [Understanding your Nimbella Project](#Understanding-Your-Nimbella-Project)
+  - [Cleaning your Nimbella Namespace](#Cleaning-your-Nimbella-Namespace)
+  - [Exporting Environment Variables to Serverless APIs](#Exporting-Environment-Variables-to-Serverless-APIs)
+- [Example Projects](#Example-Projects)
+- [Support](#Support)
+- [License](#License)
 
 ## Add-On Setup
 
@@ -114,11 +115,11 @@ Your Nimbella project may also include a `web` folder which can be deployed to t
 web = true
 ```
 
-## Cleaning your Nimbella Namespace
+#### Cleaning your Nimbella Namespace
 
 The Nimbella project configuration (`project.yml`) allows for cleaning your namespace, or deployed API package. See [the documentation](https://docs.nimbella.com/configuration#adding-project-configuration) for more details on sanitizing the namespace between deployments.
 
-## Exporting Environment Variables to Serverless APIs
+#### Exporting Environment Variables to Serverless APIs
 
 If your serverless APIs require environment variables, you have to export the variables explicitly in the `plugins.input` section of the `netlify.toml` file. This is to avoid exporting the entire environment to your APIs, and instead selecting exporting only the variables the actions need access to.
 
