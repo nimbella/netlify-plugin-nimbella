@@ -1,17 +1,10 @@
 const {existsSync} = require('fs')
-const {appendFile, readFile, readdir, writeFile} = require('fs').promises
+const {appendFile, readFile, writeFile} = require('fs').promises
 const {join} = require('path')
-const {homedir, tmpdir} = require('os')
-const toml = require('@iarna/toml')
-const cpx = require('cpx')
-const build = require('netlify-lambda/lib/build')
-const {parseRedirectsFormat} = require('netlify-redirect-parser')
+const {homedir} = require('os')
 
-const functionsBuildDir = `functions-build-${Date.now()}`
 const nimConfig = join(homedir(), '.nimbella')
-let netlifyToml = {}
 let isProject = false
-let isActions = false
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1'
@@ -33,107 +26,21 @@ async function deployProject(run) {
   await run.command(`nim project deploy . --exclude=web`)
 }
 
-/**
- * Deploy actions under a directory. Currently limited to lambda functions.
- * @param {function} run - function provided under utils by Netlify to build event functions.
- * @param {string} functionsDir - Path to the actions directory.
- */
-async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
-  const files = await readdir(functionsDir)
-  if (!existsSync(envsFile)) {
-    envsFile = false
-  }
-
-  await Promise.all(
-    files.map(async (file) => {
-      const [actionName, extension] = file.split('.')
-      const command = [
-        `nim action update ${actionName} ${join(functionsDir, file)}`,
-        `--timeout=${Number(timeout)} --memory=${Number(memory)} `,
-        `--web=raw`
-      ]
-
-      if (extension === 'js') {
-        command.push('--kind nodejs-lambda:10 --main handler')
-      }
-
-      if (envsFile) {
-        command.push(`--env-file=${envsFile}`)
-      }
-
-      const {stderr, exitCode, failed} = await run.command(command.join(' '), {
-        reject: false,
-        stdout: 'ignore'
-      })
-      const message = exitCode === 0 && !failed ? 'done.' : String(stderr)
-      console.log(`Deploying ${file}: ${message}`)
-    })
-  )
-}
-
 // Creates or updates the _redirects file; this file takes precedence
 // over other redirect declarations, and is processed from top to bottom
 //
-// First: if we deployed netlify functions to nimbella, scan the redirects
-// for matching rewrites with /.netlify/functions/* as their target
-// and remap them to their nimbella api end points.
-//
-// Second: if there is an API path directive input.api, add a matching rule
-// to the _redirects file. The target is either the Nimbella namespace/:splat
-// or namespace/default/:splat. The latter is used when deploying Netlify functions
-// to Nimbella.
-//
-// The first set of rewrites is pre-pended to the _redirects file, then the second
-// set, if any.
-async function processRedirects(redirectsFile, run, inputs, namespace) {
+// If there is an API path directive input.path in the plugin settings, add a
+// matching rule to the _redirects file. The target is the Nimbella namespace/:splat.
+async function processRedirects(run, inputs) {
   const redirectRules = []
-  const redirects = []
-  const apihost = isActions || isProject ? await getApiHost(run) : undefined
-
-  if (isActions) {
-    if (existsSync(redirectsFile)) {
-      console.log(
-        "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-      )
-      const {success} = await parseRedirectsFormat(redirectsFile)
-      redirects.push(...success)
-    }
-
-    if (netlifyToml.redirects) {
-      console.log(
-        "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-      )
-      redirects.push(...netlifyToml.redirects)
-    }
-
-    for (const redirect of redirects) {
-      if (
-        redirect.status === 200 &&
-        redirect.to &&
-        redirect.to.startsWith('/.netlify/functions/')
-      ) {
-        const redirectPath = redirect.to.split('/.netlify/functions/')[1]
-        redirectRules.push(
-          `${
-            redirect.from || redirect.path
-          } https://${apihost}/api/v1/web/${namespace}/default/${redirectPath} 200!`
-        )
-      }
-    }
-  }
+  const {stdout: namespace} = await run.command(`nim auth current`)
+  const apihost = await getApiHost(run)
 
   let {path: redirectPath} = inputs
   redirectPath = redirectPath.endsWith('/') ? redirectPath : redirectPath + '/'
-
-  if (isProject) {
+  if (redirectPath) {
     redirectRules.push(
       `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
-    )
-  }
-
-  if (isActions && !isProject) {
-    redirectRules.push(
-      `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/default/:splat 200!`
     )
   }
 
@@ -142,7 +49,7 @@ async function processRedirects(redirectsFile, run, inputs, namespace) {
 
 module.exports = {
   // Execute before build starts.
-  onPreBuild: async ({utils, constants, inputs}) => {
+  onPreBuild: async ({utils}) => {
     if (
       !process.env.NIMBELLA_LOGIN_TOKEN &&
       !(await utils.cache.has(nimConfig))
@@ -193,73 +100,45 @@ module.exports = {
       }
     }
 
-    if (constants.CONFIG_PATH && existsSync(constants.CONFIG_PATH)) {
-      netlifyToml = toml.parse(await readFile(constants.CONFIG_PATH))
-    }
-
-    isActions = inputs.functions ? existsSync(inputs.functions) : false
     isProject = existsSync('packages')
   },
-  // Build the functions
+  // Build and deploy the Nimbella project
   onBuild: async ({utils, inputs}) => {
-    try {
-      if (isActions) {
-        // Here we're passing the build directory instead of source because source is extracted from inputs.functions.
-        const stats = await build.run(functionsBuildDir, inputs.functions)
-        console.log(stats.toString(stats.compilation.options.stats))
-        // Copy any files that do not end with .js. T
-        cpx.copy(inputs.functions + '/**/*.!(js)', functionsBuildDir)
+    if (process.env.CONTEXT === 'production') {
+      if (isProject) {
+        if (inputs.env && inputs.env.length > 0) {
+          console.log('Forwarding environment variables:')
+          let envVars = ''
+          inputs.env.forEach((env) => {
+            console.log(`\t- ${env}`)
+            envVars += `\n${env} = ${process.env[env]}`
+          })
+          await appendFile('.env', envVars)
+        }
+
+        try {
+          await deployProject(utils.run)
+        } catch (error) {
+          utils.build.failBuild('Failed to build and deploy the project', {
+            error
+          })
+        }
+      } else {
+        console.log(
+          `Skipping the build and deployment: Nimbella project not detected.`
+        )
       }
-    } catch (error) {
-      utils.build.failBuild('Failed to build the functions', {error})
+    } else {
+      console.log(
+        `Skipping the build and deployment: context (${process.env.CONTEXT}) is not production.`
+      )
     }
   },
   // Execute after build is done.
   onPostBuild: async ({constants, utils, inputs}) => {
-    const {stdout: namespace} = await utils.run.command(`nim auth current`)
-
-    if (process.env.CONTEXT === 'production') {
-      if (isProject) {
-        try {
-          await deployProject(utils.run)
-        } catch (error) {
-          utils.build.failBuild('Failed to deploy the project', {error})
-        }
-      }
-
-      if (isActions) {
-        console.log('\n------------------Functions------------------\n')
-        try {
-          if (inputs.envs.length > 0) {
-            const envs = {}
-            let envMessage = 'Forwarded the following environment variables: '
-            inputs.envs.forEach((env, index) => {
-              envs[env] = process.env[env]
-              envMessage += index === inputs.envs.length - 1 ? env : env + ', '
-            })
-            await writeFile(join(tmpdir(), 'env.json'), JSON.stringify(envs))
-            console.log(envMessage)
-          }
-
-          await deployActions({
-            run: utils.run,
-            envsFile: join(tmpdir(), 'env.json'),
-            functionsDir: functionsBuildDir,
-            timeout: inputs.timeout, // Default is 6 seconds
-            memory: inputs.memory // Default is 256MB (max for free tier)
-          })
-        } catch (error) {
-          utils.build.failBuild('Failed to deploy the functions', {error})
-        }
-      }
-
+    if (process.env.CONTEXT === 'production' && isProject) {
       const redirectsFile = join(constants.PUBLISH_DIR, '_redirects')
-      const redirectRules = await processRedirects(
-        redirectsFile,
-        utils.run,
-        inputs,
-        namespace
-      )
+      const redirectRules = await processRedirects(utils.run, inputs)
 
       if (redirectRules.length > 0) {
         let content = ''
@@ -274,10 +153,6 @@ module.exports = {
         await writeFile(redirectsFile, redirectRules.join('\n') + '\n')
         await appendFile(redirectsFile, content)
       }
-    } else {
-      console.log(
-        `Skipping the deployment to Nimbella as the context (${process.env.CONTEXT}) is not production.`
-      )
     }
   }
 }

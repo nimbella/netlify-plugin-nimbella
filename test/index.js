@@ -123,84 +123,63 @@ describe('preBuild()', () => {
 })
 
 describe('onBuild()', () => {
-  test('should build functions if functions input is set in config ', async () => {
-    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
-
-    mockFs({
-      functions: {},
-      'netlify.toml': ''
-    })
-    await plugin.onPreBuild({
-      utils,
-      constants: {CONFIG_PATH: './netlify.toml'},
-      inputs: {functions: 'functions'}
-    })
-    await plugin.onBuild({
-      utils,
-      inputs: {functions: 'functions'}
-    })
-    mockFs.restore()
-
-    expect(build.run.mock.calls[0][1]).toEqual('functions')
-  })
-
-  test('should not build functions if set functions directory is not present', async () => {
-    mockFs({
-      packages: {},
-      'netlify.toml': ''
-    })
-    await plugin.onPreBuild({
-      utils,
-      constants: {CONFIG_PATH: './netlify.toml'},
-      inputs: {functions: 'abcd'}
-    })
-    await plugin.onBuild({
-      utils,
-      inputs: {functions: 'abcd'}
-    })
-    mockFs.restore()
-
-    expect(build.run.mock.calls.length).toBe(0)
-  })
-})
-
-describe('onPostBuild()', () => {
   test('should skip deployment if the context is not production', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'dev'
-    utils.run.command.mockReturnValue({
-      stdout: 'namespace'
-    })
+
     const pluginInputs = {
       utils,
       constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
       inputs: {
-        path: '',
-        functions: ''
+        path: ''
       }
     }
 
     mockFs({})
-    await plugin.onPostBuild(pluginInputs)
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onBuild(pluginInputs)
     mockFs.restore()
 
+    expect(build.run.mock.calls.length).toBe(0)
     expect(console.log.mock.calls[0][0]).toEqual(
-      `Skipping the deployment to Nimbella as the context (${process.env.CONTEXT}) is not production.`
+      `Skipping the build and deployment: context (${process.env.CONTEXT}) is not production.`
+    )
+  })
+
+  test('should skip deployment if set packages directory is not present', async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.CONTEXT = 'production'
+
+    const pluginInputs = {
+      utils,
+      constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
+      inputs: {
+        path: ''
+      }
+    }
+
+    mockFs({
+      'netlify.toml': ''
+    })
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onBuild(pluginInputs)
+    mockFs.restore()
+
+    expect(build.run.mock.calls.length).toBe(0)
+    expect(console.log.mock.calls[0][0]).toEqual(
+      `Skipping the build and deployment: Nimbella project not detected.`
     )
   })
 
   test("should run nim project deploy if 'packages' directory exists", async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
-    utils.run.command.mockReturnValue({
-      stdout: 'namespace'
-    })
+
     const pluginInputs = {
       utils,
       constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
       inputs: {
-        path: '',
-        functions: ''
+        path: ''
       }
     }
 
@@ -208,17 +187,56 @@ describe('onPostBuild()', () => {
       packages: {}
     })
     await plugin.onPreBuild(pluginInputs)
-    await plugin.onPostBuild(pluginInputs)
+    await plugin.onBuild(pluginInputs)
     mockFs.restore()
 
-    expect(utils.run.command.mock.calls[2][0]).toEqual(
+    expect(utils.run.command.mock.calls[1][0]).toEqual(
       `nim project deploy . --exclude=web`
     )
   })
 
-  test('should rewrite existing redirects to .netlify/functions/ in netlify.toml if functions are used', async () => {
+  test('should export .env file', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
+    process.env.ENV1 = 'env1value'
+    process.env.ENV2 = 'env2value'
+
+    const pluginInputs = {
+      utils,
+      constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
+      inputs: {
+        path: '',
+        env: ['ENV1', 'ENV2']
+      }
+    }
+
+    mockFs({
+      packages: {}
+    })
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onBuild(pluginInputs)
+    const redirects = String(fs.readFileSync('.env')).trim().split('\n')
+    mockFs.restore()
+
+    expect(redirects[0]).toEqual('ENV1 = env1value')
+    expect(redirects[1]).toEqual('ENV2 = env2value')
+    expect(console.log.mock.calls[0][0]).toEqual(
+      `Forwarding environment variables:`
+    )
+    expect(console.log.mock.calls[1][0]).toEqual(`\t- ENV1`)
+    expect(console.log.mock.calls[2][0]).toEqual(`\t- ENV2`)
+
+    expect(utils.run.command.mock.calls[1][0]).toEqual(
+      `nim project deploy . --exclude=web`
+    )
+  })
+})
+
+describe('onPostBuild()', () => {
+  test('should create redirects file if none exists', async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.CONTEXT = 'production'
+
     utils.run.command = jest.fn((cmd) => {
       if (cmd === 'nim auth current') return {stdout: 'namespace'}
       if (cmd === 'nim auth current --apihost') return {stdout: 'somehost'}
@@ -229,12 +247,12 @@ describe('onPostBuild()', () => {
       utils,
       constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
       inputs: {
-        path: '/api',
-        functions: 'some-dir'
+        path: '/api'
       }
     }
 
     mockFs({
+      packages: {},
       'netlify.toml': `
         [[redirects]]
         from = "/home"
@@ -257,22 +275,16 @@ describe('onPostBuild()', () => {
     const redirects = String(fs.readFileSync('_redirects')).trim().split('\n')
     mockFs.restore()
 
-    expect(console.log.mock.calls[1][0]).toEqual(
-      "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-    )
-
-    expect(redirects.length).toEqual(2)
+    expect(redirects.length).toEqual(1)
     expect(redirects[0]).toEqual(
-      '/somefn https://somehost/api/v1/web/namespace/default/fn 200!'
-    )
-    expect(redirects[1]).toEqual(
-      '/api/* https://somehost/api/v1/web/namespace/default/:splat 200!'
+      '/api/* https://somehost/api/v1/web/namespace/:splat 200!'
     )
   })
 
-  test('should rewrite existing redirects to .netlify/functions/ in netlify.toml or _redirects if functions are used', async () => {
+  test('should merge redirects if _redirects file exists', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
+
     utils.run.command = jest.fn((cmd) => {
       if (cmd === 'nim auth current') return {stdout: 'namespace'}
       if (cmd === 'nim auth current --apihost') return {stdout: 'somehost'}
@@ -283,12 +295,12 @@ describe('onPostBuild()', () => {
       utils,
       constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
       inputs: {
-        path: '/api',
-        functions: 'some-dir'
+        path: '/api'
       }
     }
 
     mockFs({
+      packages: {},
       'netlify.toml': `
         [[redirects]]
         from = "/home"
@@ -297,7 +309,7 @@ describe('onPostBuild()', () => {
 
         [[redirects]]
         from = "/somefn"
-        to = "/.netlify/functions/fn1"
+        to = "/.netlify/functions/fn"
         status = 200
       `,
       'some-dir': {
@@ -312,30 +324,14 @@ describe('onPostBuild()', () => {
 
     await plugin.onPreBuild(pluginInputs)
     await plugin.onPostBuild(pluginInputs)
-    const redirects = String(fs.readFileSync('_redirects'))
-      .split('\n')
-      .filter((_) => _)
+    const redirects = String(fs.readFileSync('_redirects')).trim().split('\n')
     mockFs.restore()
 
-    expect(console.log.mock.calls[1][0]).toEqual(
-      "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-    )
-
-    expect(console.log.mock.calls[2][0]).toEqual(
-      "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-    )
-
-    expect(redirects.length).toEqual(5)
+    expect(redirects.length).toEqual(3)
     expect(redirects[0]).toEqual(
-      '/fn2 https://somehost/api/v1/web/namespace/default/fn2 200!'
-    ) // _redirects rewrites is first
-    expect(redirects[1]).toEqual(
-      '/somefn https://somehost/api/v1/web/namespace/default/fn1 200!'
-    ) // Then toml rewrite
-    expect(redirects[2]).toEqual(
-      '/api/* https://somehost/api/v1/web/namespace/default/:splat 200!'
+      '/api/* https://somehost/api/v1/web/namespace/:splat 200!'
     ) // And input directive
-    expect(redirects[3]).toEqual('/mypath https://example.com') // Original rewrites come last
-    expect(redirects[4]).toEqual('/fn2 /.netlify/functions/fn2 200') // Original rewrites come last
+    expect(redirects[1]).toEqual('/mypath https://example.com') // Original rewrites come last
+    expect(redirects[2]).toEqual('/fn2 /.netlify/functions/fn2 200') // Original rewrites come last
   })
 })

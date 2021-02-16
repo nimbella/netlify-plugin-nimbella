@@ -12,7 +12,7 @@ The Nimbella add-on provides the following benefits.
 
 1. **More runtimes:** implement functions in numerous languages including Python, Rust, Swift, Ruby, PHP, Java, Go, Node, and Deno.
 2. **Resource customization:** run functions for longer durations, and with more memory.
-3. **Support for key-value and object stores:** build stateful APIs, and handle images or files.
+3. **Support for key-value and object stores:** build stateful APIs, and handle images or files with no additional resources to provision.
 4. **Easier packaging:** skip the hassles of web packing and working with dependencies.
 5. **Cloud portability**: repeatable deployments that work across clouds.
 
@@ -24,7 +24,6 @@ Learn more about the Nimbella add-on for Netlify [on our website](https://nimbel
   - [Minimal Netlify TOML Configuration](#minimal-netlify-toml-configuration)
 - [Usage](#usage)
   - [Use Nimbella Projects with Netlify Sites](#use-nimbella-projects-with-netlify-sites)
-  - [Deploy Netlify Functions on Nimbella Cloud](#deploy-netlify-functions-on-nimbella-cloud)
 - [Examples](#examples)
 - [Support](#support)
 - [License](#license)
@@ -42,7 +41,7 @@ To do that, run the following command from the base of your local project direct
 netlify addons:create nimbella
 ```
 
-The add-on will create a Nimbella namespace where your resources are allocated. Your Nimbella namespace includes your serverless functions, a dedicated key-value store, and access to an integrated object store.
+The add-on will create a Nimbella namespace where your resources are allocated. Your Nimbella namespace includes your serverless APIs, a dedicated key-value store, and access to an integrated object store.
 
 <!--TODO: add steps to claim the namespace and configure `nim` CLI when the flow is enabled. -->
 <!--You may claim the namespace and login to your Nimbella account by running `netlify addons:auth nimbella`.-->
@@ -68,29 +67,22 @@ Once your add-on is configured, you need to add the Nimbella Build Plugin to You
 package = "netlify-plugin-nimbella"
 ```
 
-You may provide additional configuration in the `netlify.toml` file to configure the resources available to your serverless functions, or to configure the API path for your functions. Here is an example.
+You may provide additional configuration in the `netlify.toml` file. The plugin input configuration is optional, however you will want to at least set the API `path` to avoid CORS issues between your frontend and backend components of your cloud application.
 
 ```toml
 [[plugins]]
 package = "netlify-plugin-nimbella"
+
 [plugins.inputs]
-functions = "functions" # Functions source directory. Use this if you would like to use Nimbella to deploy your functions.
-memory = 256 # Function memory limit in MB.
-path = "/api/" # The prefix path to access your deployed packages.
-timeout = 6000 # Function timeout limit in milliseconds.
+path    = "/api"   # The prefix path to access your deployed packages.
+env     = []       # Environment variables to export to serverless APIs.
 ```
 
-## Usage
-
-In this section, you will learn how to structure your repository and `netlify.toml` for this plugin to deploy your functions on Nimbella Cloud.
-
-**Note:** Deployment of packages/functions to Nimbella is skipped when the build context is not "production". We're working on an enhancement that will allow you to deploy preview builds to staging namespaces on Nimbella.
-
-#### Use Nimbella Projects with Netlify Sites
+## Understanding your Nimbella Project
 
 The Nimbella add-on for Netlify allows you to use [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) to automate packaging and deployment. We suggest reading the documentation about [Nimbella projects](https://nimbella.io/downloads/nim/nim.html#overview-of-nimbella-projects-actions-and-deployment) at some point. We provide a quick introduction here.
 
-Nimbella projects inspect a directory named `packages` at the base of your repository. The contents of this directory dictate the serverless functions that are deployed. The plugin will automatically deploy the functions inside `packages` and all of the functions (also called actions) can accessed using the following pattern: `https://your-site.com/<path(default="api")>/<packageName>/<actionName>`.
+Nimbella projects inspect a directory named `packages` at the base of your repository. The contents of this directory dictate the serverless APIs that are deployed. The plugin will automatically deploy each API inside the `packages` directory. We use the term `action` to be synonymous with serverless API (or serverless function). Each API can accessed using the following pattern: `https://your-site.com/<path(default="api")>/<packageName>/<actionName>`.
 
 For example, for the following project structure:
 
@@ -99,47 +91,31 @@ site
 ├── netlify.toml
 ├── packages
 │   ├── auth
-│   │   ├── login.js
+│   │   ├── login
+│   │   │   └── index.js
 │   │   └── logout.js
 │   └── todos
-│       ├── create.js
-│       ├── delete.js
-│       ├── list.js
-│       └── update.js
-└── public
+│       ├── create.py
+│       ├── delete.php
+│       ├── list.go
+│       └── update.swift
+└── web
     └── index.html
 ```
 
-You will invoke the function `auth/login.js` via the API end point `https://your-site.com/api/auth/login`.
+The APIs are `auth/login`, `auth/logout`, `todos/create`, and so on. An API may be a single file, or built from a set of files within an enclosing directory. You may mix languages, and deploy functions as source, without even building languages that require compilation. To API end point for any of the actions is constructed in the same way. For example the serverless API implemented by `auth/login/index.js` is invoked with the REST end point `https://your-site.com/api/auth/login`.
 
-#### Deploy Netlify Functions on Nimbella Cloud
+## Exporting Environment Variables to Serverless APIs
 
-You can deploy your existing Netlify Functions to Nimbella Cloud with very minimal changes.
-
-Specify the `functions` input value under `[plugins.inputs]` inside `netlify.toml`.
-
-```diff
-[[plugins]]
-package = "netlify-plugin-nimbella"
-+ [plugins.inputs]
-+ functions = "functions" # Functions source directory. Use this if you would like to use Nimbella to deploy your functions.
-```
-
-To be able to pass **environment variables** to functions, you should first set them as Netlify build environment variables and use the below plugin input to selectively forward the variables to functions deployed on Nimbella.
+If your serverless APIs require environment variables, you have to export the variables explicitly in the `plugins.input` section of the `netlify.toml` file. This is to avoid exporting the entire environment to your APIs, and instead selecting exporting only the variables the actions need access to.
 
 ```toml
 [plugins.inputs]
-envs = ['ENV_ONE', 'ENV_TWO']
+# Export specified environment variables to the serverless APIs
+env = ['ENV_ONE', 'ENV_TWO']
 ```
 
-This plugin builds your functions using a modified version of [netlify-lambda](https://github.com/netlify/netlify-lambda). You can get rid of any build steps you're performing on functions since the plugin handles it for you.
-
-**Notes:**
-
-- Replace occurrences of `/.netlify/functions` in your API calls with `/.netlify/nimbella`, or use `/api`, as your API path instead.
-- All Netlify functions are deployed to a "default" package in your Nimbella namespace. The package name is required in the API path. For Netlify functions, the path will be `/.netlify/nimbella/default/` or `/api/default`. For named packages, replace `default` with your package name instead.
-
-## Examples
+## Example Projects
 
 These are few sites that use `netlify-plugin-nimbella` to deploy frontend content to Netlify and functions on Nimbella.
 
@@ -150,7 +126,7 @@ Look at `netlify.toml` of these repositories to get an idea on how the plugin is
 
 ## Support
 
-We're always happy to help you with any issues you encounter. You may want to [join our Slack community](https://nimbella-community.slack.com) to engage with us for a more rapid response. Otherwise, open an issue and provide us with details about your situation so we can respond adequately.
+We welcome your feedback, and we are  happy to help you with any issues you encounter. You may want to [join our Slack community](https://nimbella-community.slack.com) to engage with us for a more rapid response. Otherwise, open an issue and provide us with details about your situation so we can respond adequately.
 
 ## License
 
