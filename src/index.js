@@ -17,6 +17,15 @@ let isActions = false
 process.env.NIM_DISABLE_AUTOUPDATE = '1'
 
 /**
+ * Retrieves API host for current auth.
+ * Assumes there is a valid auth already.
+ */
+async function getApiHost(run) {
+  const {stdout: apihost} = await run.command(`nim auth current --apihost`)
+  return apihost.replace(/^(https:\/\/)/, '')
+}
+
+/**
  * Deploy a Nimbella Project.
  * @param {*} run - function provided under utils by Netlify to build event functions.
  */
@@ -60,6 +69,75 @@ async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
       console.log(`Deploying ${file}: ${message}`)
     })
   )
+}
+
+// Creates or updates the _redirects file; this file takes precedence
+// over other redirect declarations, and is processed from top to bottom
+//
+// First: if we deployed netlify functions to nimbella, scan the redirects
+// for matching rewrites with /.netlify/functions/* as their target
+// and remap them to their nimbella api end points.
+//
+// Second: if there is an API path directive input.api, add a matching rule
+// to the _redirects file. The target is either the Nimbella namespace/:splat
+// or namespace/default/:splat. The latter is used when deploying Netlify functions
+// to Nimbella.
+//
+// The first set of rewrites is pre-pended to the _redirects file, then the second
+// set, if any.
+async function processRedirects(redirectsFile, run, inputs, namespace) {
+  const redirectRules = []
+  const redirects = []
+  const apihost = isActions || isProject ? await getApiHost(run) : undefined
+
+  if (isActions) {
+    if (existsSync(redirectsFile)) {
+      console.log(
+        "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+      )
+      const {success} = await parseRedirectsFormat(redirectsFile)
+      redirects.push(...success)
+    }
+
+    if (netlifyToml.redirects) {
+      console.log(
+        "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
+      )
+      redirects.push(...netlifyToml.redirects)
+    }
+
+    for (const redirect of redirects) {
+      if (
+        redirect.status === 200 &&
+        redirect.to &&
+        redirect.to.startsWith('/.netlify/functions/')
+      ) {
+        const redirectPath = redirect.to.split('/.netlify/functions/')[1]
+        redirectRules.push(
+          `${
+            redirect.from || redirect.path
+          } https://${apihost}/api/v1/web/${namespace}/default/${redirectPath} 200!`
+        )
+      }
+    }
+  }
+
+  let {path: redirectPath} = inputs
+  redirectPath = redirectPath.endsWith('/') ? redirectPath : redirectPath + '/'
+
+  if (isProject) {
+    redirectRules.push(
+      `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
+    )
+  }
+
+  if (isActions && !isProject) {
+    redirectRules.push(
+      `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/default/:splat 200!`
+    )
+  }
+
+  return redirectRules
 }
 
 module.exports = {
@@ -174,96 +252,32 @@ module.exports = {
           utils.build.failBuild('Failed to deploy the functions', {error})
         }
       }
+
+      const redirectsFile = join(constants.PUBLISH_DIR, '_redirects')
+      const redirectRules = await processRedirects(
+        redirectsFile,
+        utils.run,
+        inputs,
+        namespace
+      )
+
+      if (redirectRules.length > 0) {
+        let content = ''
+        if (existsSync(redirectsFile)) {
+          content = await readFile(redirectsFile)
+        } else if (!existsSync(constants.PUBLISH_DIR)) {
+          const mkdir = require('make-dir')
+          await mkdir(constants.PUBLISH_DIR)
+        }
+
+        // The rewrites take precedence
+        await writeFile(redirectsFile, redirectRules.join('\n') + '\n')
+        await appendFile(redirectsFile, content)
+      }
     } else {
       console.log(
         `Skipping the deployment to Nimbella as the context (${process.env.CONTEXT}) is not production.`
       )
-    }
-
-    const redirectRules = []
-    const redirects = []
-    const redirectsFile = join(constants.PUBLISH_DIR, '_redirects')
-    let {stdout: apihost} = await utils.run.command(
-      `nim auth current --apihost`
-    )
-    apihost = apihost.replace(/^(https:\/\/)/, '')
-
-    // Creates or updates the _redirects file; this file takes precedence
-    // over other redirect declarations, and is processed from top to bottom
-    //
-    // First: if we deployed netlify functions to nimbella, scan the redirects
-    // for matching rewrites with /.netlify/functions/* as their target
-    // and remap them to their nimbella api end points.
-    //
-    // Second: if there is an API path directive input.api, add a matching rule
-    // to the _redirects file. The target is either the Nimbella namespace/:splat
-    // or namespace/default/:splat. The latter is used when deploying Netlify functions
-    // to Nimbella.
-    //
-    // The first set of rewrites is pre-pended to the _redirects file, then the second
-    // set, if any.
-
-    if (isActions) {
-      if (existsSync(redirectsFile)) {
-        console.log(
-          "Found _redirects file. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-        )
-        const {success} = await parseRedirectsFormat(redirectsFile)
-        redirects.push(...success)
-      }
-
-      if (netlifyToml.redirects) {
-        console.log(
-          "Found redirect rules in netlify.toml. We will rewrite rules that redirect (200 rewrites) to '/.netlify/functions/*'."
-        )
-        redirects.push(...netlifyToml.redirects)
-      }
-
-      for (const redirect of redirects) {
-        if (
-          redirect.status === 200 &&
-          redirect.to &&
-          redirect.to.startsWith('/.netlify/functions/')
-        ) {
-          const redirectPath = redirect.to.split('/.netlify/functions/')[1]
-          redirectRules.push(
-            `${
-              redirect.from || redirect.path
-            } https://${apihost}/api/v1/web/${namespace}/default/${redirectPath} 200!`
-          )
-        }
-      }
-    }
-
-    let {path: redirectPath} = inputs
-    redirectPath = redirectPath.endsWith('/')
-      ? redirectPath
-      : redirectPath + '/'
-
-    if (isProject) {
-      redirectRules.push(
-        `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
-      )
-    }
-
-    if (isActions && !isProject) {
-      redirectRules.push(
-        `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/default/:splat 200!`
-      )
-    }
-
-    if (redirectRules.length > 0) {
-      let content = ''
-      if (existsSync(redirectsFile)) {
-        content = await readFile(redirectsFile)
-      } else if (!existsSync(constants.PUBLISH_DIR)) {
-        const mkdir = require('make-dir')
-        await mkdir(constants.PUBLISH_DIR)
-      }
-
-      // The rewrites take precedence
-      await writeFile(redirectsFile, redirectRules.join('\n') + '\n')
-      await appendFile(redirectsFile, content)
     }
   }
 }
