@@ -8,6 +8,16 @@ inputs:
     description: Deploy entire project include web frontend. Proxy domain to Nimbella.
     default: false
 
-  - name: env
+  - name: envs
     description: Environment variables to forward from Netlify CI to Nimbella Projects.
     default: []
+
+  ## These are deprecated: migrate to using Nimbella project.yml instead which permit per-API level control.
+  - name: functions
+    description: The source directory containing Netlify functions to deploy to Nimbella.
+
+  - name: timeout
+    description: Timeout LIMIT in milliseconds to apply to all Netlify functions running on Nimbella.
+
+  - name: memory
+    description: Memory LIMIT in MB to apply to all Netlify functions running on Nimbella.
