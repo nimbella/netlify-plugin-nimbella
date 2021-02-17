@@ -2,10 +2,12 @@ const {existsSync} = require('fs')
 const {appendFile, readFile, writeFile} = require('fs').promises
 const {join} = require('path')
 const {homedir} = require('os')
+const {buildAndDeployNetlifyFunctions, rewriteRedirects} = require('./nfn')
 
 const nimConfig = join(homedir(), '.nimbella')
-let isProject = false
-let deployWeb = false
+let isProject = false // True if deploying a Nimbella project
+let deployWeb = false // True if deploying a Nimbella project with a web folder and proxying the domain
+let hasFunctions = false // True if deploying Netlify functions
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1'
@@ -39,44 +41,102 @@ async function deployProject(run, includeWeb) {
 // matching rule to the _redirects file. The target is the Nimbella namespace/:splat.
 //
 // If deploying the web assets as well, then proxy the entire domain instead.
-async function processRedirects(run, inputs) {
+async function addRedirect(inputs, {namespace, apihost}) {
   const redirectRules = []
-  const {stdout: namespace} = await run.command(`nim auth current`)
-  const apihost = await getApiHost(run)
 
   if (deployWeb) {
     redirectRules.push(`/* https://${namespace}-${apihost}/:splat 200!`)
-  } else {
-    let {path: redirectPath} = inputs
-    redirectPath = redirectPath.endsWith('/')
-      ? redirectPath
-      : redirectPath + '/'
-    if (redirectPath) {
-      redirectRules.push(
-        `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
-      )
-    }
+  } else if (inputs.path) {
+    const redirectPath = inputs.path.endsWith('/')
+      ? inputs.path
+      : inputs.path + '/'
+    const pkg = isProject ? '' : 'default/'
+    redirectRules.push(
+      `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/${pkg}:splat 200!`
+    )
   }
 
   return redirectRules
 }
 
+/**
+ * Checks inputs for validity.
+ * Issues warning if deprecated input properties are used.
+ * @param {object} inputs
+ * @returns true iff input parameters are valid
+ */
+function checkInputsAndNotifyOfDeprecation(inputs) {
+  const warn = (prop) => {
+    const chalk = require('chalk')
+    console.warn(
+      chalk.yellow(`${prop} is deprecated.`),
+      'Migrate to Nimbella project.yml.'
+    )
+  }
+
+  const error = (prop, units) => {
+    const chalk = require('chalk')
+    console.warn(chalk.yellow(`${prop} must be a number in ${units}.`))
+  }
+
+  let valid = true
+  if (inputs) {
+    if (inputs.functions) warn('[inputs.functions]')
+    if (inputs.timeout) {
+      warn('[inputs.timeout]')
+      if (Number.isNaN(Number(inputs.timeout))) {
+        error('[inputs.timeout]', 'milliseconds in [100-10000])')
+        valid = false
+      }
+    }
+
+    if (inputs.memory) {
+      warn('[inputs.memory]')
+      if (Number.isNaN(Number(inputs.memory))) {
+        error('[inputs.memory]', 'megabytes in [128-512])')
+        valid = false
+      }
+    }
+  }
+
+  return valid
+}
+
+async function constructDotEnvFile(inputs) {
+  if (inputs.envs && inputs.envs.length > 0) {
+    console.log('Forwarding environment variables:')
+    let envVars = ''
+    inputs.envs.forEach((env) => {
+      console.log(`\t- ${env}`)
+      envVars += `\n${env} = ${process.env[env]}`
+    })
+    await appendFile('.env', envVars)
+  }
+}
+
 module.exports = {
   // Execute before build starts.
   onPreBuild: async ({utils, inputs}) => {
+    const valid = checkInputsAndNotifyOfDeprecation(inputs)
+    if (!valid) {
+      utils.build.failBuild('Invalid input parameters.')
+    }
+
     if (
       !process.env.NIMBELLA_LOGIN_TOKEN &&
       !(await utils.cache.has(nimConfig))
     ) {
       utils.build.failBuild(
-        'Nimbella login token is not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
+        [
+          'Nimbella login token is not available.',
+          `Add NIMBELLA_LOGIN_TOKEN to your build environment.',
+          'You may also run 'netlify addons:create nimbella' in your project directory linked to this Netlify site.`
+        ].join('\n')
       )
     }
 
     await utils.cache.restore(nimConfig)
-
     const loggedIn = existsSync(nimConfig)
-    // Login if not logged in before.
     if (loggedIn) {
       try {
         const {stdout} = await utils.run.command('nim auth current', {
@@ -122,28 +182,28 @@ module.exports = {
     }
 
     isProject = existsSync('packages') || (deployWeb && existsSync('web'))
+    hasFunctions = inputs.functions && existsSync(inputs.functions)
+
+    if (hasFunctions && isProject) {
+      utils.build.failBuild(
+        'Detected both a Nimbella project and a functions directory. Use one or the other.'
+      )
+    }
   },
   // Build and deploy the Nimbella project
   onBuild: async ({utils, inputs}) => {
     if (process.env.CONTEXT === 'production') {
       if (isProject) {
-        if (inputs.env && inputs.env.length > 0) {
-          console.log('Forwarding environment variables:')
-          let envVars = ''
-          inputs.env.forEach((env) => {
-            console.log(`\t- ${env}`)
-            envVars += `\n${env} = ${process.env[env]}`
-          })
-          await appendFile('.env', envVars)
-        }
-
         try {
+          await constructDotEnvFile(inputs)
           await deployProject(utils.run, deployWeb)
         } catch (error) {
           utils.build.failBuild('Failed to build and deploy the project', {
             error
           })
         }
+      } else if (hasFunctions) {
+        return buildAndDeployNetlifyFunctions({utils, inputs})
       } else {
         console.log(
           `Skipping the build and deployment: Nimbella project not detected.`
@@ -157,11 +217,17 @@ module.exports = {
   },
   // Execute after build is done.
   onPostBuild: async ({constants, utils, inputs}) => {
-    if (process.env.CONTEXT === 'production' && isProject) {
+    if (process.env.CONTEXT === 'production' && (isProject || hasFunctions)) {
       const redirectsFile = join(constants.PUBLISH_DIR, '_redirects')
-      const redirectRules = await processRedirects(utils.run, inputs)
+      const {stdout: namespace} = await utils.run.command(`nim auth current`)
+      const apihost = await getApiHost(utils.run)
+      const creds = {namespace, apihost}
+      const fnRewrites = hasFunctions
+        ? await rewriteRedirects(constants, creds)
+        : []
+      const redirectRules = await addRedirect(inputs, creds)
 
-      if (redirectRules.length > 0) {
+      if (fnRewrites.length > 0 || redirectRules.length > 0) {
         let content = ''
         if (existsSync(redirectsFile)) {
           content = await readFile(redirectsFile)
@@ -171,8 +237,12 @@ module.exports = {
         }
 
         // The rewrites take precedence
-        await writeFile(redirectsFile, redirectRules.join('\n') + '\n')
+        fnRewrites.push(...redirectRules)
+        await writeFile(redirectsFile, fnRewrites.join('\n') + '\n')
         await appendFile(redirectsFile, content)
+
+        const rf = await readFile(redirectsFile)
+        console.log(`Redirects:\n${rf}`)
       }
     }
   }
