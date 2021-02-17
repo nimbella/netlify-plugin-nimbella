@@ -133,8 +133,9 @@ env = ['ENV_ONE', 'ENV_TWO']
 
 These are few sites that use `netlify-plugin-nimbella` to deploy frontend content to Netlify and functions on Nimbella.
 
-- [A "hello world" example](https://github.com/nimbella/netlify-plugin-nimbella.netlify.app)
-- [Optical character recognition using Nimbella key-value and object stores](https://github.com/nimbella/netlify-nimbella-ocr)
+- [Hello World](https://github.com/nimbella/netlify-plugin-nimbella.netlify.app): deploy frontend to Netlify CDN, serverless APIs to Nimbella.
+- [Severless 🐱](https://github.com/rabbah/whiskers): deploy entire project to Nimbella and proxy from Netlify site. Site is built with [Jekyll](https://jekyllrb.com).
+- [Optical character recognition](https://github.com/nimbella/netlify-nimbella-ocr): A React-App with stateful serverless APIs using Nimbella key-value and object stores.
 
 Look at `netlify.toml` of these repositories to get an idea on how the plugin is used.
 
