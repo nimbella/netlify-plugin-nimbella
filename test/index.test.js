@@ -1,9 +1,6 @@
 const path = require('path')
-
 const fs = require('fs')
 const mockFs = require('mock-fs')
-const build = require('netlify-lambda/lib/build')
-
 const plugin = require('../src')
 
 const utils = {
@@ -19,8 +16,10 @@ const utils = {
     failBuild: jest.fn()
   }
 }
-jest.mock('netlify-lambda/lib/build')
+
 console.log = jest.fn()
+console.warn = jest.fn()
+jest.mock('chalk', () => ({yellow: (_) => _}))
 
 afterEach(() => {
   delete require.cache[require.resolve('../src')]
@@ -29,8 +28,8 @@ afterEach(() => {
   utils.cache.has.mockReset()
   utils.cache.restore.mockReset()
   utils.cache.save.mockReset()
-  build.run.mockReset()
   console.log.mockReset()
+  console.warn.mockReset()
 })
 
 describe('preBuild()', () => {
@@ -79,7 +78,7 @@ describe('preBuild()', () => {
     )
   })
 
-  test('show token not available message when login token not set', async () => {
+  test('Show token not available message when login token not set', async () => {
     // Prepare
     process.env.NIMBELLA_LOGIN_TOKEN = ''
     utils.cache.has.mockResolvedValue(false)
@@ -120,10 +119,42 @@ describe('preBuild()', () => {
       'Using the following namespace: namespace'
     )
   })
+
+  test('Should issue deprecation warnings', async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+
+    const pluginInputs = {
+      utils,
+      inputs: {functions: 'somePath', timeout: 100, memory: 256}
+    }
+
+    mockFs({
+      packages: {},
+      somePath: {},
+      // eslint-disable-next-line camelcase
+      node_modules: mockFs.load(path.resolve(__dirname, '../node_modules'))
+    })
+
+    await plugin.onPreBuild(pluginInputs)
+    mockFs.restore()
+
+    expect(console.warn.mock.calls[0]).toEqual([
+      '[inputs.functions] is deprecated.',
+      'Migrate to Nimbella project.yml.'
+    ])
+    expect(console.warn.mock.calls[0]).toEqual([
+      '[inputs.functions] is deprecated.',
+      'Migrate to Nimbella project.yml.'
+    ])
+    expect(console.warn.mock.calls[0]).toEqual([
+      '[inputs.functions] is deprecated.',
+      'Migrate to Nimbella project.yml.'
+    ])
+  })
 })
 
 describe('onBuild()', () => {
-  test('should skip deployment if the context is not production', async () => {
+  test('Should skip deployment if the context is not production', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'dev'
 
@@ -140,13 +171,12 @@ describe('onBuild()', () => {
     await plugin.onBuild(pluginInputs)
     mockFs.restore()
 
-    expect(build.run.mock.calls.length).toBe(0)
     expect(console.log.mock.calls[0][0]).toEqual(
       `Skipping the build and deployment: context (${process.env.CONTEXT}) is not production.`
     )
   })
 
-  test('should skip deployment if set packages directory is not present', async () => {
+  test('Should skip deployment if set packages directory is not present', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
 
@@ -165,13 +195,12 @@ describe('onBuild()', () => {
     await plugin.onBuild(pluginInputs)
     mockFs.restore()
 
-    expect(build.run.mock.calls.length).toBe(0)
     expect(console.log.mock.calls[0][0]).toEqual(
       `Skipping the build and deployment: Nimbella project not detected.`
     )
   })
 
-  test("should run nim project deploy if 'packages' directory exists", async () => {
+  test("Should run nim project deploy if 'packages' directory exists", async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
 
@@ -195,7 +224,7 @@ describe('onBuild()', () => {
     )
   })
 
-  test('should export .env file', async () => {
+  test('Should export .env file', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
     process.env.ENV1 = 'env1value'
@@ -206,7 +235,7 @@ describe('onBuild()', () => {
       constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
       inputs: {
         path: '',
-        env: ['ENV1', 'ENV2']
+        envs: ['ENV1', 'ENV2']
       }
     }
 
@@ -231,7 +260,7 @@ describe('onBuild()', () => {
     )
   })
 
-  test("should run nim project deploy excluding 'web' if inputs.web is not set", async () => {
+  test("Should run nim project deploy excluding 'web' if inputs.web is not set", async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
 
@@ -256,7 +285,7 @@ describe('onBuild()', () => {
     )
   })
 
-  test("should run nim project deploy if 'web' directory exists and inputs.web is set", async () => {
+  test("Should run nim project deploy if 'web' directory exists and inputs.web is set", async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
 
@@ -265,7 +294,7 @@ describe('onBuild()', () => {
       constants: {CONFIG_PATH: './netlify.toml', PUBLISH_DIR: ''},
       inputs: {
         path: '',
-        web: 'true'
+        web: true // Testing web value as bool, later tested as string
       }
     }
 
@@ -281,7 +310,7 @@ describe('onBuild()', () => {
 })
 
 describe('onPostBuild()', () => {
-  test('should create redirects file if none exists', async () => {
+  test('Should create redirects file if none exists', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
 
@@ -329,7 +358,7 @@ describe('onPostBuild()', () => {
     )
   })
 
-  test('should merge redirects if _redirects file exists', async () => {
+  test('Should merge redirects if _redirects file exists', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
 
@@ -383,7 +412,7 @@ describe('onPostBuild()', () => {
     expect(redirects[2]).toEqual('/fn2 /.netlify/functions/fn2 200') // Original rewrites come last
   })
 
-  test('should proxy entire domain if deploying web assets', async () => {
+  test('Should proxy entire domain if deploying web assets', async () => {
     process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
     process.env.CONTEXT = 'production'
 
@@ -398,7 +427,7 @@ describe('onPostBuild()', () => {
       constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
       inputs: {
         path: '/api',
-        web: 'true'
+        web: 'true' // Testing web value as string
       }
     }
 

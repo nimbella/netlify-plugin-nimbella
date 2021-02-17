@@ -4,8 +4,8 @@ const {join} = require('path')
 const {homedir} = require('os')
 
 const nimConfig = join(homedir(), '.nimbella')
-let isProject = false
-let deployWeb = false
+let isProject = false // True if deploying a Nimbella project
+let deployWeb = false // True if deploying a Nimbella project with a web folder and proxying the domain
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1'
@@ -61,9 +61,43 @@ async function processRedirects(run, inputs) {
   return redirectRules
 }
 
+/**
+ * Issues warning if deprecated input properties are used.
+ * @param {object} inputs
+ */
+function warnOfDeprecationIfNecessary(inputs) {
+  const warn = (prop) => {
+    const chalk = require('chalk')
+    console.warn(
+      chalk.yellow(`${prop} is deprecated.`),
+      'Migrate to Nimbella project.yml.'
+    )
+  }
+
+  if (inputs) {
+    if (inputs.functions) warn('[inputs.functions]')
+    if (inputs.timeout) warn('[inputs.timeout]')
+    if (inputs.memory) warn('[inputs.memory]')
+  }
+}
+
+async function constructDotEnvFile(inputs) {
+  if (inputs.envs && inputs.envs.length > 0) {
+    console.log('Forwarding environment variables:')
+    let envVars = ''
+    inputs.envs.forEach((env) => {
+      console.log(`\t- ${env}`)
+      envVars += `\n${env} = ${process.env[env]}`
+    })
+    await appendFile('.env', envVars)
+  }
+}
+
 module.exports = {
   // Execute before build starts.
   onPreBuild: async ({utils, inputs}) => {
+    warnOfDeprecationIfNecessary(inputs)
+
     if (
       !process.env.NIMBELLA_LOGIN_TOKEN &&
       !(await utils.cache.has(nimConfig))
@@ -76,7 +110,7 @@ module.exports = {
     await utils.cache.restore(nimConfig)
 
     const loggedIn = existsSync(nimConfig)
-    // Login if not logged in before.
+
     if (loggedIn) {
       try {
         const {stdout} = await utils.run.command('nim auth current', {
@@ -127,17 +161,8 @@ module.exports = {
   onBuild: async ({utils, inputs}) => {
     if (process.env.CONTEXT === 'production') {
       if (isProject) {
-        if (inputs.env && inputs.env.length > 0) {
-          console.log('Forwarding environment variables:')
-          let envVars = ''
-          inputs.env.forEach((env) => {
-            console.log(`\t- ${env}`)
-            envVars += `\n${env} = ${process.env[env]}`
-          })
-          await appendFile('.env', envVars)
-        }
-
         try {
+          await constructDotEnvFile(inputs)
           await deployProject(utils.run, deployWeb)
         } catch (error) {
           utils.build.failBuild('Failed to build and deploy the project', {
