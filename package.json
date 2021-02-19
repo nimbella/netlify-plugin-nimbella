@@ -29,7 +29,6 @@
   },
   "homepage": "https://github.com/nimbella/netlify-plugin-nimbella#readme",
   "dependencies": {
-    "@iarna/toml": "^2.2.5",
     "cpx": "^1.5.0",
     "make-dir": "^3.1.0",
     "netlify-lambda": "satyarohith/netlify-lambda#88eac6a37bfb0920897c86ecda8682944a2bf5be",
