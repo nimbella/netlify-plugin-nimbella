@@ -1,3 +1,4 @@
+const {existsSync} = require('fs')
 const {readdir, writeFile} = require('fs').promises
 const {join} = require('path')
 const {tmpdir} = require('os')
@@ -69,6 +70,52 @@ async function constructEnvFileAsJson(inputs) {
   }
 }
 
+// Scans the _redirects file and netlify.toml for redirects that map to
+// '/.netlify/functions/*' as their target. These are remapped to new endpoints.
+// The first set of rewrites is pre-pended to the _redirects file, then the second
+// set, if any, because precedence is top to bottom.
+async function rewriteRedirects(constants, {apihost, namespace}) {
+  const redirects = []
+
+  const {
+    parseRedirectsFormat,
+    parseNetlifyConfig
+  } = require('netlify-redirect-parser')
+
+  const filterRedirects = async (description, filename, parser) => {
+    if (filename && existsSync(filename)) {
+      console.log(
+        `Found ${description}. Rewriting rules that redirect (200 rewrites) to '/.netlify/functions/*'.`
+      )
+      const {success} = await parser(filename)
+      const toAdd = success.filter(
+        (redirect) =>
+          redirect.status === 200 &&
+          redirect.to &&
+          redirect.to.startsWith('/.netlify/functions/')
+      )
+      redirects.push(...toAdd)
+    }
+  }
+
+  const redirectsFile = join(constants.PUBLISH_DIR, '_redirects')
+  await filterRedirects('_redirects file', redirectsFile, parseRedirectsFormat)
+
+  const configFile = constants.CONFIG_PATH
+  await filterRedirects(
+    'redirect rules in netlify.toml',
+    configFile,
+    parseNetlifyConfig
+  )
+
+  return redirects.map((redirect) => {
+    const redirectPath = redirect.to.split('/.netlify/functions/')[1]
+    return `${
+      redirect.from || redirect.path
+    } https://${apihost}/api/v1/web/${namespace}/default/${redirectPath} 200!`
+  })
+}
+
 async function buildAndDeployNetlifyFunctions({utils, inputs}) {
   const cpx = require('cpx')
   const build = require('netlify-lambda/lib/build')
@@ -104,5 +151,6 @@ async function buildAndDeployNetlifyFunctions({utils, inputs}) {
 module.exports = {
   deployActions,
   constructEnvFileAsJson,
+  rewriteRedirects,
   buildAndDeployNetlifyFunctions
 }

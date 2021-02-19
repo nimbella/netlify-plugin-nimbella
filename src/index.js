@@ -2,7 +2,7 @@ const {existsSync} = require('fs')
 const {appendFile, readFile, writeFile} = require('fs').promises
 const {join} = require('path')
 const {homedir} = require('os')
-const {buildAndDeployNetlifyFunctions} = require('./nfn')
+const {buildAndDeployNetlifyFunctions, rewriteRedirects} = require('./nfn')
 
 const nimConfig = join(homedir(), '.nimbella')
 let isProject = false // True if deploying a Nimbella project
@@ -41,23 +41,19 @@ async function deployProject(run, includeWeb) {
 // matching rule to the _redirects file. The target is the Nimbella namespace/:splat.
 //
 // If deploying the web assets as well, then proxy the entire domain instead.
-async function processRedirects(run, inputs) {
+async function addRedirect(inputs, {namespace, apihost}) {
   const redirectRules = []
-  const {stdout: namespace} = await run.command(`nim auth current`)
-  const apihost = await getApiHost(run)
 
   if (deployWeb) {
     redirectRules.push(`/* https://${namespace}-${apihost}/:splat 200!`)
-  } else {
-    let {path: redirectPath} = inputs
-    redirectPath = redirectPath.endsWith('/')
-      ? redirectPath
-      : redirectPath + '/'
-    if (redirectPath) {
-      redirectRules.push(
-        `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/:splat 200!`
-      )
-    }
+  } else if (inputs.path) {
+    const redirectPath = inputs.path.endsWith('/')
+      ? inputs.path
+      : inputs.path + '/'
+    const pkg = isProject ? '' : 'default/'
+    redirectRules.push(
+      `${redirectPath}* https://${apihost}/api/v1/web/${namespace}/${pkg}:splat 200!`
+    )
   }
 
   return redirectRules
@@ -110,9 +106,7 @@ module.exports = {
     }
 
     await utils.cache.restore(nimConfig)
-
     const loggedIn = existsSync(nimConfig)
-
     if (loggedIn) {
       try {
         const {stdout} = await utils.run.command('nim auth current', {
@@ -193,11 +187,17 @@ module.exports = {
   },
   // Execute after build is done.
   onPostBuild: async ({constants, utils, inputs}) => {
-    if (process.env.CONTEXT === 'production' && isProject) {
+    if (process.env.CONTEXT === 'production' && (isProject || hasFunctions)) {
       const redirectsFile = join(constants.PUBLISH_DIR, '_redirects')
-      const redirectRules = await processRedirects(utils.run, inputs)
+      const {stdout: namespace} = await utils.run.command(`nim auth current`)
+      const apihost = await getApiHost(utils.run)
+      const creds = {namespace, apihost}
+      const fnRewrites = hasFunctions
+        ? await rewriteRedirects(constants, creds)
+        : []
+      const redirectRules = await addRedirect(inputs, creds)
 
-      if (redirectRules.length > 0) {
+      if (fnRewrites.length > 0 || redirectRules.length > 0) {
         let content = ''
         if (existsSync(redirectsFile)) {
           content = await readFile(redirectsFile)
@@ -207,7 +207,8 @@ module.exports = {
         }
 
         // The rewrites take precedence
-        await writeFile(redirectsFile, redirectRules.join('\n') + '\n')
+        fnRewrites.push(...redirectRules)
+        await writeFile(redirectsFile, fnRewrites.join('\n') + '\n')
         await appendFile(redirectsFile, content)
       }
     }

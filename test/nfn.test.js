@@ -3,7 +3,14 @@ const mockFs = require('mock-fs')
 const path = require('path')
 const build = require('netlify-lambda/lib/build')
 const plugin = require('../src')
-const {constructEnvFileAsJson, deployActions} = require('../src/nfn')
+const {
+  constructEnvFileAsJson,
+  deployActions,
+  rewriteRedirects
+} = require('../src/nfn')
+
+// eslint-disable-next-line camelcase
+const node_modules = mockFs.load(path.resolve(__dirname, '../node_modules'))
 
 const utils = {
   cache: {
@@ -50,7 +57,7 @@ describe('preBuild()', () => {
       packages: {},
       somePath: {},
       // eslint-disable-next-line camelcase
-      node_modules: mockFs.load(path.resolve(__dirname, '../node_modules'))
+      node_modules
     })
 
     await plugin.onPreBuild(pluginInputs)
@@ -75,7 +82,7 @@ describe('onBuild', () => {
     mockFs({
       somePath: {},
       // eslint-disable-next-line camelcase
-      node_modules: mockFs.load(path.resolve(__dirname, '../node_modules'))
+      node_modules
     })
 
     await plugin.onPreBuild(pluginInputs)
@@ -99,12 +106,72 @@ describe('onBuild', () => {
     expect(JSON.parse(envsJson)).toEqual({ENV1: 'someenv1', ENV2: 'someenv2'})
   })
 
+  test('Should proxy entire domain if deploying web assets', async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+    process.env.CONTEXT = 'production'
+
+    utils.run.command = jest.fn((cmd) => {
+      if (cmd === 'nim auth current') return {stdout: 'namespace'}
+      if (cmd === 'nim auth current --apihost') return {stdout: 'somehost'}
+      return {stdout: '???'}
+    })
+
+    const pluginInputs = {
+      utils,
+      constants: {CONFIG_PATH: 'netlify.toml', PUBLISH_DIR: ''},
+      inputs: {
+        path: '/api',
+        functions: 'somePath'
+      }
+    }
+
+    mockFs({
+      somePath: {},
+      'netlify.toml': `
+        [[redirects]]
+        from = "/home"
+        to = "/index.html"
+        status = 200
+
+        [[redirects]]
+        from = "/somefn"
+        to = "/.netlify/functions/fn"
+        status = 200
+      `,
+      'some-dir': {
+        'create.js': '',
+        'update.js': ''
+      },
+      _redirects: [
+        '/mypath https://example.com',
+        '/fn2 /.netlify/functions/fn2 200'
+      ].join('\n'),
+      // eslint-disable-next-line camelcase
+      node_modules
+    })
+
+    await plugin.onPreBuild(pluginInputs)
+    await plugin.onPostBuild(pluginInputs)
+    const redirects = String(fs.readFileSync('_redirects')).trim().split('\n')
+    mockFs.restore()
+
+    expect(redirects).toEqual([
+      '/fn2 https://somehost/api/v1/web/namespace/default/fn2 200!', // Rewrite from _redires
+      '/somefn https://somehost/api/v1/web/namespace/default/fn 200!', // Rewrite from toml file
+      '/api/* https://somehost/api/v1/web/namespace/default/:splat 200!', // Inputs.path redirect
+      '/mypath https://example.com', // Original redirects come last
+      '/fn2 /.netlify/functions/fn2 200' // Original redirects come last
+    ])
+  })
+})
+
+describe('supporting functions', () => {
   test('Should deploy actions', async () => {
     mockFs({
       somePath: {'jshello.js': '', 'pyhello.py': ''},
       'env.json': '{}',
       // eslint-disable-next-line camelcase
-      node_modules: mockFs.load(path.resolve(__dirname, '../node_modules'))
+      node_modules
     })
 
     utils.run.command.mockResolvedValue({
@@ -130,6 +197,57 @@ describe('onBuild', () => {
     )
     expect(console.warn.mock.calls[0][0].split('\n')[1].trim()).toEqual(
       'pyhello.py: Lambda compatibility is not available for this function.'
+    )
+  })
+
+  test('Should rewrite matching redirects', async () => {
+    const pluginInputs = {
+      constants: {
+        CONFIG_PATH: 'netlify.toml',
+        PUBLISH_DIR: ''
+      }
+    }
+
+    mockFs({
+      'netlify.toml': `
+        [[redirects]]
+        from = "/home"
+        to = "/index.html"
+        status = 200
+
+        [[redirects]]
+        from = "/somefn"
+        to = "/.netlify/functions/fn"
+        status = 200
+      `,
+      _redirects: [
+        '/mypath https://example.com',
+        '/fn2 /.netlify/functions/fn2 200'
+      ].join('\n'),
+      // eslint-disable-next-line camelcase
+      node_modules
+    })
+
+    const redirects = await rewriteRedirects(pluginInputs.constants, {
+      namespace: 'namespace',
+      apihost: 'somehost'
+    })
+    mockFs.restore()
+
+    expect(console.log.mock.calls[0][0]).toEqual(
+      `Found _redirects file. Rewriting rules that redirect (200 rewrites) to '/.netlify/functions/*'.`
+    )
+
+    expect(console.log.mock.calls[1][0]).toEqual(
+      `Found redirect rules in netlify.toml. Rewriting rules that redirect (200 rewrites) to '/.netlify/functions/*'.`
+    )
+
+    expect(redirects.length).toEqual(2)
+    expect(redirects[0]).toEqual(
+      '/fn2 https://somehost/api/v1/web/namespace/default/fn2 200!'
+    )
+    expect(redirects[1]).toEqual(
+      '/somefn https://somehost/api/v1/web/namespace/default/fn 200!'
     )
   })
 })
