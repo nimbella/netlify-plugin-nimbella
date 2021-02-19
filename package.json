@@ -60,6 +60,14 @@
     "testMatch": [
       "**/test/**/*.js"
     ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 91,
+        "functions": 100,
+        "lines": 95,
+        "statements": -10
+      }
+    },
     "verbose": true
   },
   "devDependencies": {
