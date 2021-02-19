@@ -190,12 +190,44 @@ describe('supporting functions', () => {
     mockFs.restore()
 
     expect(utils.run.command.mock.calls[0][0]).toEqual(
-      'nim action update jshello somePath/jshello.js --timeout=120 --memory=256  --web=raw --kind nodejs-lambda:10 --main handler --env-file=env.json'
+      'nim action update jshello somePath/jshello.js --web=raw --timeout=120 --memory=256 --kind nodejs-lambda:10 --main handler --env-file=env.json'
     )
     expect(utils.run.command.mock.calls[1][0]).toEqual(
-      'nim action update pyhello somePath/pyhello.py --timeout=120 --memory=256  --web=raw --env-file=env.json'
+      'nim action update pyhello somePath/pyhello.py --web=raw --timeout=120 --memory=256 --env-file=env.json'
     )
-    expect(console.warn.mock.calls[0][0].split('\n')[1].trim()).toEqual(
+    expect(console.warn.mock.calls[0][0]).toEqual(
+      'pyhello.py: Lambda compatibility is not available for this function.'
+    )
+  })
+
+  test('Should deploy actions with default limits', async () => {
+    mockFs({
+      somePath: {'jshello.js': '', 'pyhello.py': ''},
+      'env.json': '{}',
+      // eslint-disable-next-line camelcase
+      node_modules
+    })
+
+    utils.run.command.mockResolvedValue({
+      stderr: '',
+      exitCode: 0,
+      failed: false
+    })
+
+    await deployActions({
+      run: utils.run,
+      envsFile: 'env.json',
+      functionsDir: 'somePath'
+    })
+    mockFs.restore()
+
+    expect(utils.run.command.mock.calls[0][0]).toEqual(
+      'nim action update jshello somePath/jshello.js --web=raw --kind nodejs-lambda:10 --main handler --env-file=env.json'
+    )
+    expect(utils.run.command.mock.calls[1][0]).toEqual(
+      'nim action update pyhello somePath/pyhello.py --web=raw --env-file=env.json'
+    )
+    expect(console.warn.mock.calls[0][0]).toEqual(
       'pyhello.py: Lambda compatibility is not available for this function.'
     )
   })

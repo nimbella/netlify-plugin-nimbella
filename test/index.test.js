@@ -90,8 +90,8 @@ describe('preBuild()', () => {
     })
 
     expect(utils.cache.has.mock.calls.length).toBe(1)
-    expect(utils.build.failBuild.mock.calls[0][0]).toEqual(
-      'Nimbella login token is not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
+    expect(utils.build.failBuild.mock.calls[0][0].split('\n')[0]).toEqual(
+      'Nimbella login token is not available.'
     )
   })
 
@@ -142,14 +142,40 @@ describe('preBuild()', () => {
       '[inputs.functions] is deprecated.',
       'Migrate to Nimbella project.yml.'
     ])
-    expect(console.warn.mock.calls[0]).toEqual([
-      '[inputs.functions] is deprecated.',
+    expect(console.warn.mock.calls[1]).toEqual([
+      '[inputs.timeout] is deprecated.',
       'Migrate to Nimbella project.yml.'
     ])
-    expect(console.warn.mock.calls[0]).toEqual([
-      '[inputs.functions] is deprecated.',
+    expect(console.warn.mock.calls[2]).toEqual([
+      '[inputs.memory] is deprecated.',
       'Migrate to Nimbella project.yml.'
     ])
+  })
+
+  test('Should fail the build if inputs are invalid', async () => {
+    process.env.NIMBELLA_LOGIN_TOKEN = 'somevalue'
+
+    const pluginInputs = {
+      utils,
+      inputs: {functions: 'somePath', timeout: 'oops', memory: 'oops'}
+    }
+
+    mockFs({
+      packages: {},
+      somePath: {},
+      // eslint-disable-next-line camelcase
+      node_modules: mockFs.load(path.resolve(__dirname, '../node_modules'))
+    })
+
+    await plugin.onPreBuild(pluginInputs)
+    mockFs.restore()
+
+    expect(console.warn.mock.calls[2][0]).toEqual(
+      '[inputs.timeout] must be a number in milliseconds in [100-10000]).'
+    )
+    expect(console.warn.mock.calls[4][0]).toEqual(
+      '[inputs.memory] must be a number in megabytes in [128-512]).'
+    )
   })
 })
 

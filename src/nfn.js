@@ -18,11 +18,15 @@ async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
   await Promise.all(
     files.map(async (file) => {
       const [actionName, extension] = file.split('.') // This assume name.ext format
-      const command = [
-        `nim action update ${actionName} ${join(functionsDir, file)}`,
-        `--timeout=${Number(timeout)} --memory=${Number(memory)} `,
-        `--web=raw`
-      ]
+      const command = [`nim action update ${actionName} ${join(functionsDir, file)} --web=raw`]
+
+      if (timeout) {
+        command.push(`--timeout=${Number(timeout)}`)
+      }
+
+      if (memory) {
+        command.push(`--memory=${Number(memory)}`)
+      }
 
       if (extension === 'js') {
         // Run node functions with lambda compatibility
@@ -31,14 +35,15 @@ async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
         const chalk = require('chalk')
 
         // Else let the cli infer the kind based on the file extension
-        console.warn(`
-           ${chalk.yellow(
-             file + ': Lambda compatibility is not available for this function.'
-           )}
-           The main handler must be called 'main', must accept a JSON object as input, and return JSON object as output.
-           The function will run as Apache OpenWhisk action on the Nimbella Cloud.
-           See https://github.com/apache/openwhisk/blob/master/docs/actions.md#languages-and-runtimes
-           for examples of serverless function signatures that are comptatible.`)
+        console.warn(
+          chalk.yellow(
+            file + ': Lambda compatibility is not available for this function.'
+          ),
+          `The main handler must be called 'main', must accept a JSON object as input, and return JSON object as output.`,
+          'The function will run as Apache OpenWhisk action on the Nimbella Cloud.',
+          'See https://github.com/apache/openwhisk/blob/master/docs/actions.md#languages-and-runtimes',
+          'for examples of serverless function signatures that are comptatible.'
+        )
       }
 
       if (envsFile) {
@@ -51,7 +56,7 @@ async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
       })
 
       const message = exitCode === 0 && !failed ? 'done.' : String(stderr)
-      console.log(`Deployed ${file}: ${message}`)
+      console.log(`Deployment status ${file}: ${message}`)
     })
   )
 }

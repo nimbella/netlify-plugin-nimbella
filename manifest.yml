@@ -18,8 +18,6 @@ inputs:
 
   - name: timeout
     description: Timeout LIMIT in milliseconds to apply to all Netlify functions running on Nimbella.
-    default: 6000
 
   - name: memory
     description: Memory LIMIT in MB to apply to all Netlify functions running on Nimbella.
-    default: 256

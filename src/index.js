@@ -60,10 +60,12 @@ async function addRedirect(inputs, {namespace, apihost}) {
 }
 
 /**
+ * Checks inputs for validity.
  * Issues warning if deprecated input properties are used.
  * @param {object} inputs
+ * @returns true iff input parameters are valid
  */
-function warnOfDeprecationIfNecessary(inputs) {
+function checkInputsAndNotifyOfDeprecation(inputs) {
   const warn = (prop) => {
     const chalk = require('chalk')
     console.warn(
@@ -72,11 +74,32 @@ function warnOfDeprecationIfNecessary(inputs) {
     )
   }
 
+  const error = (prop, units) => {
+    const chalk = require('chalk')
+    console.warn(chalk.yellow(`${prop} must be a number in ${units}.`))
+  }
+
+  let valid = true
   if (inputs) {
     if (inputs.functions) warn('[inputs.functions]')
-    if (inputs.timeout) warn('[inputs.timeout]')
-    if (inputs.memory) warn('[inputs.memory]')
+    if (inputs.timeout) {
+      warn('[inputs.timeout]')
+      if (Number.isNaN(Number(inputs.timeout))) {
+        error('[inputs.timeout]', 'milliseconds in [100-10000])')
+        valid = false
+      }
+    }
+
+    if (inputs.memory) {
+      warn('[inputs.memory]')
+      if (Number.isNaN(Number(inputs.memory))) {
+        error('[inputs.memory]', 'megabytes in [128-512])')
+        valid = false
+      }
+    }
   }
+
+  return valid
 }
 
 async function constructDotEnvFile(inputs) {
@@ -94,14 +117,21 @@ async function constructDotEnvFile(inputs) {
 module.exports = {
   // Execute before build starts.
   onPreBuild: async ({utils, inputs}) => {
-    warnOfDeprecationIfNecessary(inputs)
+    const valid = checkInputsAndNotifyOfDeprecation(inputs)
+    if (!valid) {
+      utils.build.failBuild('Invalid input parameters.')
+    }
 
     if (
       !process.env.NIMBELLA_LOGIN_TOKEN &&
       !(await utils.cache.has(nimConfig))
     ) {
       utils.build.failBuild(
-        'Nimbella login token is not available. Please run `netlify addons:create nimbella` at the base of your local project directory linked to your Netlify site.'
+        [
+          'Nimbella login token is not available.',
+          `Add NIMBELLA_LOGIN_TOKEN to your build environment.',
+          'You may also run 'netlify addons:create nimbella' in your project directory linked to this Netlify site.`
+        ].join('\n')
       )
     }
 
