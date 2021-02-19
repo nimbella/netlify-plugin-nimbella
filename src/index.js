@@ -2,10 +2,12 @@ const {existsSync} = require('fs')
 const {appendFile, readFile, writeFile} = require('fs').promises
 const {join} = require('path')
 const {homedir} = require('os')
+const {buildAndDeployNetlifyFunctions} = require('./nfn')
 
 const nimConfig = join(homedir(), '.nimbella')
 let isProject = false // True if deploying a Nimbella project
 let deployWeb = false // True if deploying a Nimbella project with a web folder and proxying the domain
+let hasFunctions = false // True if deploying Netlify functions
 
 // Disable auto updates of nim.
 process.env.NIM_DISABLE_AUTOUPDATE = '1'
@@ -156,6 +158,13 @@ module.exports = {
     }
 
     isProject = existsSync('packages') || (deployWeb && existsSync('web'))
+    hasFunctions = inputs.functions && existsSync(inputs.functions)
+
+    if (hasFunctions && isProject) {
+      utils.build.failBuild(
+        'Detected both a Nimbella project and a functions directory. Use one or the other.'
+      )
+    }
   },
   // Build and deploy the Nimbella project
   onBuild: async ({utils, inputs}) => {
@@ -169,6 +178,8 @@ module.exports = {
             error
           })
         }
+      } else if (hasFunctions) {
+        return buildAndDeployNetlifyFunctions({utils, inputs})
       } else {
         console.log(
           `Skipping the build and deployment: Nimbella project not detected.`

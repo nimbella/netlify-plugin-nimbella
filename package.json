@@ -30,7 +30,11 @@
   "homepage": "https://github.com/nimbella/netlify-plugin-nimbella#readme",
   "dependencies": {
     "make-dir": "^3.1.0",
-    "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz"
+    "nimbella-cli": "https://apigcp.nimbella.io/downloads/nim/nimbella-cli.tgz",
+    "@iarna/toml": "^2.2.5",
+    "cpx": "^1.5.0",
+    "netlify-lambda": "satyarohith/netlify-lambda#88eac6a37bfb0920897c86ecda8682944a2bf5be",
+    "netlify-redirect-parser": "^2.5.0"
   },
   "xo": {
     "space": true,
