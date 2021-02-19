@@ -210,6 +210,9 @@ module.exports = {
         fnRewrites.push(...redirectRules)
         await writeFile(redirectsFile, fnRewrites.join('\n') + '\n')
         await appendFile(redirectsFile, content)
+
+        const rf = await readFile(redirectsFile)
+        console.log(`Redirects:\n${rf}`)
       }
     }
   }
