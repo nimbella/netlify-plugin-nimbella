@@ -1,8 +1,8 @@
 {
   "name": "netlify-plugin-nimbella",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "main": "src/index.js",
-  "description": "Nimbella add-on for Netlify to extends Netlify Sites with stateful serverless APIs using Nimbella Cloud.",
+  "description": "Nimbella plugin to extend Netlify Sites with stateful and portable serverless APIs.",
   "scripts": {
     "setup": "yarn install",
     "precommit": "xo && jest --coverage",
