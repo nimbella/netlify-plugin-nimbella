@@ -6,6 +6,7 @@ const plugin = require('../src')
 const {
   constructEnvFileAsJson,
   deployActions,
+  makeEnvFileAndDeploy,
   rewriteRedirects
 } = require('../src/nfn')
 
@@ -183,7 +184,7 @@ describe('supporting functions', () => {
     await deployActions({
       run: utils.run,
       envsFile: 'env.json',
-      functionsDir: 'somePath',
+      functionsBuildDir: 'somePath',
       timeout: '120',
       memory: '256'
     })
@@ -197,6 +198,62 @@ describe('supporting functions', () => {
     )
     expect(console.warn.mock.calls[0][0]).toEqual(
       'pyhello.py: Lambda compatibility is not available for this function.'
+    )
+  })
+
+  test('Should not fail the build if actions deploy', async () => {
+    mockFs({
+      somePath: {'jshello.js': '', 'pyhello.py': ''},
+      'env.json': '{}',
+      // eslint-disable-next-line camelcase
+      node_modules
+    })
+
+    utils.run.command.mockResolvedValue({
+      stderr: '',
+      exitCode: 0,
+      failed: false
+    })
+
+    await makeEnvFileAndDeploy({
+      utils,
+      inputs: {
+        timeout: '120',
+        memory: '256'
+      },
+      functionsBuildDir: 'somePath'
+    })
+    mockFs.restore()
+
+    expect(utils.build.failBuild.mock.calls.length).toBe(0)
+  })
+
+  test('Should fail the build if actions fail to deploy', async () => {
+    mockFs({
+      somePath: {'jshello.js': '', 'pyhello.py': ''},
+      'env.json': '{}',
+      // eslint-disable-next-line camelcase
+      node_modules
+    })
+
+    utils.run.command.mockResolvedValue({
+      stderr: 'oops',
+      exitCode: 1,
+      failed: true
+    })
+
+    await makeEnvFileAndDeploy({
+      utils,
+      inputs: {
+        timeout: '120',
+        memory: '256'
+      },
+      functionsBuildDir: 'somePath'
+    })
+    mockFs.restore()
+
+    expect(utils.build.failBuild.mock.calls[0][0]).toEqual(
+      'Failed to deploy 2 functions'
     )
   })
 
@@ -217,7 +274,7 @@ describe('supporting functions', () => {
     await deployActions({
       run: utils.run,
       envsFile: 'env.json',
-      functionsDir: 'somePath'
+      functionsBuildDir: 'somePath'
     })
     mockFs.restore()
 

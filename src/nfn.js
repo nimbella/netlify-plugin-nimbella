@@ -7,18 +7,29 @@ const {tmpdir} = require('os')
  * Deploys actions under a directory. Currently limited to lambda functions.
  *
  * @param {function} run - function provided under utils by Netlify to build event functions.
- * @param {string} functionsDir - Path to the functions/actions directory.
+ * @param {string} functionsBuildDir - Path to the functions/actions directory where sources were built.
  * @param {string} timeout - Max allowed duration for each function activation.
  * @param {string} memory - Max memory allowed for each function activation.
  * @param {string} envsFile - Path to environment file (optional).
  */
-async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
-  const files = await readdir(functionsDir)
+async function deployActions({
+  run,
+  functionsBuildDir,
+  timeout,
+  memory,
+  envsFile
+}) {
+  const files = await readdir(functionsBuildDir)
 
-  await Promise.all(
+  return Promise.all(
     files.map(async (file) => {
       const [actionName, extension] = file.split('.') // This assume name.ext format
-      const command = [`nim action update ${actionName} ${join(functionsDir, file)} --web=raw`]
+      const command = [
+        `nim action update ${actionName} ${join(
+          functionsBuildDir,
+          file
+        )} --web=raw`
+      ]
 
       if (timeout) {
         command.push(`--timeout=${Number(timeout)}`)
@@ -55,8 +66,10 @@ async function deployActions({run, functionsDir, timeout, memory, envsFile}) {
         stdout: 'ignore'
       })
 
-      const message = exitCode === 0 && !failed ? 'done.' : String(stderr)
+      const success = exitCode === 0 && !failed
+      const message = success ? 'done.' : String(stderr)
       console.log(`Deployment status ${file}: ${message}`)
+      return success
     })
   )
 }
@@ -121,6 +134,26 @@ async function rewriteRedirects(constants, {apihost, namespace}) {
   })
 }
 
+async function makeEnvFileAndDeploy({utils, inputs, functionsBuildDir}) {
+  try {
+    const envsFile = await constructEnvFileAsJson(inputs)
+    const status = await deployActions({
+      run: utils.run,
+      envsFile,
+      functionsBuildDir,
+      timeout: inputs.timeout,
+      memory: inputs.memory
+    })
+
+    const failCount = status.filter((_) => !_).length
+    if (failCount > 0) {
+      utils.build.failBuild(`Failed to deploy ${failCount} functions`)
+    }
+  } catch (error) {
+    utils.build.failBuild('Failed to deploy the functions', {error})
+  }
+}
+
 async function buildAndDeployNetlifyFunctions({utils, inputs}) {
   const cpx = require('cpx')
   const build = require('netlify-lambda/lib/build')
@@ -139,23 +172,13 @@ async function buildAndDeployNetlifyFunctions({utils, inputs}) {
     return
   }
 
-  try {
-    const envsFile = await constructEnvFileAsJson(inputs)
-    await deployActions({
-      run: utils.run,
-      envsFile,
-      functionsDir: functionsBuildDir,
-      timeout: inputs.timeout, // Default setting applies
-      memory: inputs.memory // Default setting applies
-    })
-  } catch (error) {
-    utils.build.failBuild('Failed to deploy the functions', {error})
-  }
+  await makeEnvFileAndDeploy({utils, inputs, functionsBuildDir})
 }
 
 module.exports = {
   deployActions,
   constructEnvFileAsJson,
   rewriteRedirects,
+  makeEnvFileAndDeploy,
   buildAndDeployNetlifyFunctions
 }
