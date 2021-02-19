@@ -127,7 +127,7 @@ async function buildAndDeployNetlifyFunctions({utils, inputs}) {
   const functionsBuildDir = `functions-build-${Date.now()}`
 
   try {
-    const stats = await build.run(functionsBuildDir)
+    const stats = await build.run(functionsBuildDir, inputs.functions)
     console.log(stats.toString(stats.compilation.options.stats))
     // Copy any remaining files that do not end with '.js'.
     // Arguably we should not do this, if the functions are Netlify
